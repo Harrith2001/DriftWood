@@ -1,0 +1,15 @@
+<div class="intro" [class.intro--leaving]="leaving()">
+  <header class="intro__head">
+    <p class="intro__role">{{ identity.role }}</p>
+    <h1 class="intro__name">{{ identity.name }}</h1>
+    <p class="intro__tagline">{{ identity.tagline }}</p>
+  </header>
+
+  <div class="intro__foot">
+    <button type="button" class="intro__begin" (click)="begin.emit()">
+      <span class="intro__begin-label">Scroll down to enter the world</span>
+      <span class="intro__chevron" aria-hidden="true"></span>
+    </button>
+    <button type="button" class="intro__skip" (click)="skip.emit()">Skip the arrival</button>
+  </div>
+</div>

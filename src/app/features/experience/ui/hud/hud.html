@@ -1,0 +1,53 @@
+<div class="hud" [class.hud--hidden]="hidden()">
+  <!-- Objectives. Each entry is a button, so every location stays reachable
+       without driving the character around. -->
+  <nav class="objectives" aria-label="Places to discover">
+    <p class="objectives__count">
+      <span class="objectives__found">{{ discoveredCount() }}</span>
+      <span class="objectives__sep">/</span>
+      <span>{{ hotspots.length }}</span>
+      <span class="objectives__word">discovered</span>
+    </p>
+    <ul class="objectives__list">
+      @for (spot of hotspots; track spot.id) {
+        <li>
+          <button
+            type="button"
+            class="objective"
+            [class.objective--near]="nearby() === spot.id"
+            [class.objective--done]="isDiscovered(spot.id)"
+            [style.--dot]="dotColor(spot.color)"
+            (click)="jumpTo.emit(spot.id)"
+          >
+            <span class="objective__dot" aria-hidden="true"></span>
+            <span class="objective__label">{{ spot.label }}</span>
+            @if (isDiscovered(spot.id)) {
+              <span class="objective__check" aria-label="visited">✓</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <!-- Proximity prompt -->
+  @if (nearbyTitle()) {
+    <div class="prompt" role="status" aria-live="polite">
+      <button type="button" class="prompt__button" (click)="interact.emit()">
+        <kbd class="prompt__key">E</kbd>
+        <span>Open {{ nearbyTitle() }}</span>
+      </button>
+    </div>
+  }
+
+  <!-- Control hints -->
+  <div class="hints" [class.hints--faded]="allDiscovered()">
+    @if (touch()) {
+      <span class="hints__item">Drag the pad to move</span>
+    } @else {
+      <span class="hints__item"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span>
+      <span class="hints__item"><kbd>Shift</kbd> run</span>
+      <span class="hints__item"><kbd>E</kbd> open</span>
+    }
+  </div>
+</div>

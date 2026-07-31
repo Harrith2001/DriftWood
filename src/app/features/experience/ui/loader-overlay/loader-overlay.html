@@ -1,0 +1,18 @@
+<div class="overlay" [class.overlay--dismissed]="dismissed()" role="status" aria-live="polite">
+  @if (error()) {
+    <div class="failure" role="alert">
+      <h2 class="failure__title">The island didn't load</h2>
+      <p class="failure__detail">{{ error() }}</p>
+      <button type="button" class="failure__retry" (click)="retry.emit()">Try again</button>
+    </div>
+  } @else {
+    <div class="loading">
+      <div class="ring" aria-hidden="true"></div>
+      <div class="track">
+        <div class="track__fill" [style.transform]="'scaleX(' + progress() + ')'"></div>
+      </div>
+      <p class="percent">{{ percent() }}%</p>
+      <p class="hint">Preparing the island</p>
+    </div>
+  }
+</div>

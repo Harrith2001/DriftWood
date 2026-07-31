@@ -1,0 +1,132 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--deep, #04060d);
+  transition:
+    opacity 900ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),
+    visibility 900ms;
+}
+
+.overlay--dismissed {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.ring {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid rgb(94 207 255 / 0.16);
+  border-top-color: var(--accent, #5ecfff);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.track {
+  width: min(180px, 40vw);
+  height: 1px;
+  background: rgb(255 255 255 / 0.1);
+  overflow: hidden;
+}
+
+.track__fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  /* Scaling a full-width bar keeps this on the compositor — no layout per frame. */
+  transform: scaleX(0);
+  background: linear-gradient(90deg, var(--accent, #5ecfff), var(--accent-2, #a78bfa));
+  transition: transform 200ms linear;
+}
+
+.percent,
+.hint {
+  margin: 0;
+  font-family: var(--font-mono, 'Space Mono', monospace);
+  font-size: 0.6875rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.percent {
+  color: rgb(94 207 255 / 0.75);
+}
+
+.hint {
+  color: rgb(255 255 255 / 0.32);
+  font-size: 0.625rem;
+  letter-spacing: 0.22em;
+}
+
+/* ── Failure ── */
+.failure {
+  max-width: 30rem;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.failure__title {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-weight: 500;
+  color: #fff;
+}
+
+.failure__detail {
+  margin: 0 0 1.75rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: rgb(255 255 255 / 0.45);
+  overflow-wrap: anywhere;
+}
+
+.failure__retry {
+  padding: 0.7rem 1.6rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #04060d;
+  background: var(--accent, #5ecfff);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.failure__retry:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgb(94 207 255 / 0.3);
+}
+
+.failure__retry:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    animation: none;
+  }
+  .overlay {
+    transition-duration: 1ms;
+  }
+}

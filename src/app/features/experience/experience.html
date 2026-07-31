@@ -1,0 +1,40 @@
+<div class="stage">
+  <!-- The scene. aria-hidden because everything it conveys is mirrored in the
+       overlays and panels, which are the accessible representation. -->
+  <canvas #canvas class="stage__canvas" aria-hidden="true"></canvas>
+
+  <!-- Film grain, purely decorative -->
+  <div class="stage__grain" aria-hidden="true"></div>
+
+  <app-loader-overlay
+    [progress]="state.loadProgress()"
+    [error]="state.loadError()"
+    [dismissed]="loaderDismissed()"
+    (retry)="retryLoad()"
+  />
+
+  @if (showIntro()) {
+    <app-intro-overlay
+      [leaving]="introLeaving()"
+      (begin)="beginArrival()"
+      (skip)="skipArrival()"
+    />
+  }
+
+  @if (state.isExploring()) {
+    <app-hud
+      [nearby]="state.nearbyHotspot()"
+      [discovered]="state.discovered()"
+      [hidden]="state.openPanel() !== null"
+      [touch]="isTouch()"
+      (interact)="requestInteract()"
+      (jumpTo)="jumpTo($event)"
+    />
+
+    @if (isTouch() && state.openPanel() === null) {
+      <app-touch-controls (axes)="onTouchAxes($event)" (interact)="requestInteract()" />
+    }
+  }
+
+  <app-content-panel [panelId]="state.openPanel()" (close)="closePanel()" />
+</div>

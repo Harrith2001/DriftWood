@@ -1,0 +1,23 @@
+<div class="touch">
+  <div
+    class="stick"
+    (pointerdown)="onDown($event)"
+    (pointermove)="onMove($event)"
+    (pointerup)="onUp($event)"
+    (pointercancel)="onUp($event)"
+    (pointerleave)="onUp($event)"
+    role="application"
+    aria-label="Movement joystick"
+  >
+    <div class="stick__base" aria-hidden="true"></div>
+    <div
+      class="stick__knob"
+      aria-hidden="true"
+      [style.transform]="'translate(' + knobX() + 'px,' + knobY() + 'px)'"
+    ></div>
+  </div>
+
+  <button type="button" class="action" (click)="interact.emit()" aria-label="Open location">
+    E
+  </button>
+</div>

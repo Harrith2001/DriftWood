@@ -1,0 +1,70 @@
+@if (panel(); as content) {
+  <div class="scrim" (click)="close.emit()">
+    <article
+      class="panel"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="'panel-title-' + content.id"
+      [style.--accent-panel]="accentColor()"
+      tabindex="-1"
+      #dialog
+      (click)="$event.stopPropagation()"
+      (keydown.escape)="close.emit()"
+    >
+      <header class="panel__head">
+        <p class="panel__kicker">{{ content.kicker }}</p>
+        <h2 class="panel__title" [id]="'panel-title-' + content.id">{{ content.title }}</h2>
+      </header>
+
+      <div class="panel__body">
+        @for (paragraph of content.body; track $index) {
+          <p class="panel__text">{{ paragraph }}</p>
+        }
+
+        @if (content.items?.length) {
+          <ul class="items">
+            @for (item of content.items; track item.title) {
+              <li class="item">
+                <div class="item__head">
+                  <h3 class="item__title">{{ item.title }}</h3>
+                  @if (item.meta) {
+                    <span class="item__meta">{{ item.meta }}</span>
+                  }
+                </div>
+                <p class="item__description">{{ item.description }}</p>
+                @if (item.tags?.length) {
+                  <ul class="tags">
+                    @for (tag of item.tags; track tag) {
+                      <li class="tag">{{ tag }}</li>
+                    }
+                  </ul>
+                }
+              </li>
+            }
+          </ul>
+        }
+
+        @if (content.links?.length) {
+          <ul class="links">
+            @for (link of content.links; track link.href) {
+              <li>
+                <a
+                  class="link"
+                  [href]="link.href"
+                  [attr.target]="isExternal(link.href) ? '_blank' : null"
+                  [attr.rel]="isExternal(link.href) ? 'noopener noreferrer' : null"
+                  >{{ link.label }}</a
+                >
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <button type="button" class="panel__close" (click)="close.emit()" aria-label="Close">
+        <span aria-hidden="true">✕</span>
+        <span class="panel__close-hint">Esc</span>
+      </button>
+    </article>
+  </div>
+}

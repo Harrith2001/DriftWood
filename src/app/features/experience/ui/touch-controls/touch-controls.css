@@ -1,0 +1,62 @@
+.touch {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 25;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 1.25rem clamp(1rem, 5vw, 2rem) calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+
+.stick {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  pointer-events: auto;
+  /* Stops the browser panning/zooming the page while the stick is in use. */
+  touch-action: none;
+}
+
+.stick__base {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  background: rgb(6 10 18 / 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.stick__knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  background: rgb(255 255 255 / 0.16);
+  backdrop-filter: blur(4px);
+  /* No transition: the knob must track the finger exactly. */
+}
+
+.action {
+  pointer-events: auto;
+  touch-action: none;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  background: rgb(6 10 18 / 0.5);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.action:active {
+  background: rgb(94 207 255 / 0.24);
+}
