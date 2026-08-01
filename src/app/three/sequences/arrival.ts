@@ -94,10 +94,6 @@ export class ArrivalSequence {
     private readonly landingY: number = GROUND_Y,
   ) {}
 
-  get isRunning(): boolean {
-    return this.timeline?.isActive() ?? false;
-  }
-
   /**
    * Builds and plays the arrival.
    * @param onComplete invoked once the character is standing and in control

@@ -162,10 +162,6 @@ export class Character {
     this.state = next;
   }
 
-  get animationState(): AnimState {
-    return this.state;
-  }
-
   /** Scales walk playback so foot speed roughly tracks ground speed. */
   setWalkSpeed(multiplier: number): void {
     const walk = this.actions.get('walking');
