@@ -15,17 +15,28 @@ export class Beacons {
   readonly group = new THREE.Group();
   private readonly entries = new Map<
     PanelId,
-    { ring: THREE.Mesh; column: THREE.Mesh; base: number }
+    { ring: THREE.Mesh; column: THREE.Mesh; base: number; x: number; z: number }
   >();
   private readonly geometries: THREE.BufferGeometry[] = [];
   private readonly materials: THREE.Material[] = [];
   private elapsed = 0;
 
+  /**
+   * Below FADE_NEAR the shaft is gone entirely; above FADE_FAR it is at full
+   * strength. Tuned against the island, which is only about nineteen units
+   * across: push these out much further and the shafts never really appear, so
+   * they stop doing the one job they exist for.
+   */
+  private static readonly FADE_NEAR = 5;
+  private static readonly FADE_FAR = 11;
+
   constructor() {
     this.group.name = 'beacons';
 
     const ringGeo = new THREE.RingGeometry(0.85, 1.35, 40);
-    const columnGeo = new THREE.CylinderGeometry(0.16, 0.28, 7, 14, 1, true);
+    // Slimmer and shorter than it once was, with enough segments that the
+    // silhouette reads as a shaft of light rather than a faceted tube.
+    const columnGeo = new THREE.CylinderGeometry(0.09, 0.18, 5, 24, 1, true);
     this.geometries.push(ringGeo, columnGeo);
 
     for (const spot of HOTSPOTS) {
@@ -52,11 +63,11 @@ export class Beacons {
         blending: THREE.AdditiveBlending,
       });
       const column = new THREE.Mesh(columnGeo, columnMat);
-      column.position.set(spot.x, GROUND_Y + 3.5, spot.z);
+      column.position.set(spot.x, GROUND_Y + 2.5, spot.z);
 
       this.materials.push(ringMat, columnMat);
       this.group.add(ring, column);
-      this.entries.set(spot.id, { ring, column, base: 1 });
+      this.entries.set(spot.id, { ring, column, base: 1, x: spot.x, z: spot.z });
     }
   }
 
@@ -64,28 +75,47 @@ export class Beacons {
    * @param delta        frame time
    * @param nearby       hotspot currently in range, if any
    * @param discovered   hotspots already read, which fade back
+   * @param cameraPos    used to fade the light shafts out at close range
    */
-  update(delta: number, nearby: PanelId | null, discovered: ReadonlySet<PanelId>): void {
+  update(
+    delta: number,
+    nearby: PanelId | null,
+    discovered: ReadonlySet<PanelId>,
+    cameraPos?: THREE.Vector3,
+  ): void {
     this.elapsed += delta;
-    // Slow breathing pulse so the beacons read as alive without flickering.
-    const pulse = 0.5 + 0.5 * Math.sin(this.elapsed * 1.5);
+    // Gentle breathing. The amplitude is deliberately small: the shafts are
+    // additive, so a pulse that doubles their opacity reads as a strobe rather
+    // than a glow, and anything it passes in front of appears to flash.
+    const pulse = 0.5 + 0.5 * Math.sin(this.elapsed * 1.1);
 
     for (const [id, entry] of this.entries) {
       const isNear = id === nearby;
       const isRead = discovered.has(id);
-      const target = isNear ? 1.6 : isRead ? 0.35 : 1;
+      const target = isNear ? 1.4 : isRead ? 0.35 : 1;
 
       // Ease toward the target so state changes never snap.
       entry.base = THREE.MathUtils.lerp(entry.base, target, Math.min(1, delta * 5));
 
       const ringMat = entry.ring.material as THREE.MeshBasicMaterial;
       const colMat = entry.column.material as THREE.MeshBasicMaterial;
-      ringMat.opacity = 0.28 * entry.base + 0.22 * pulse * entry.base;
-      colMat.opacity = 0.1 * entry.base + 0.1 * pulse * entry.base;
 
-      const scale = 1 + 0.06 * pulse * entry.base;
-      entry.ring.scale.setScalar(scale);
-      entry.column.rotation.y += delta * 0.25;
+      // The shaft exists to say "something is over there". Up close that job is
+      // done by the ground ring and the on-screen prompt, while the shaft itself
+      // becomes a full-height slab washing over the palms behind it — so it
+      // fades right out as you approach.
+      let proximity = 1;
+      if (cameraPos) {
+        const distance = Math.hypot(cameraPos.x - entry.x, cameraPos.z - entry.z);
+        proximity = THREE.MathUtils.smoothstep(distance, Beacons.FADE_NEAR, Beacons.FADE_FAR);
+      }
+
+      ringMat.opacity = (0.26 + 0.16 * pulse) * entry.base;
+      colMat.opacity = (0.05 + 0.045 * pulse) * entry.base * proximity;
+      entry.column.visible = colMat.opacity > 0.004;
+
+      // The ring is the close-range cue, so it keeps its gentle breathing scale.
+      entry.ring.scale.setScalar(1 + 0.05 * pulse * entry.base);
     }
   }
 
