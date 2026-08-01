@@ -18,11 +18,6 @@ export class DeviceService {
     return this.doc.defaultView?.matchMedia('(hover: none) and (pointer: coarse)').matches ?? false;
   }
 
-  get isSmallViewport(): boolean {
-    if (!this.isBrowser) return false;
-    return (this.doc.defaultView?.innerWidth ?? 1920) < 768;
-  }
-
   /** Honoured by suppressing the autoplayed arrival and all idle drift. */
   get prefersReducedMotion(): boolean {
     if (!this.isBrowser) return false;

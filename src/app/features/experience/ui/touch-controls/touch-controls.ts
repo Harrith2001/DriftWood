@@ -35,7 +35,14 @@ export class TouchControls {
     // Anchor to the well's centre so the first touch does not jerk the character.
     this.originX = rect.left + rect.width / 2;
     this.originY = rect.top + rect.height / 2;
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    // Capture keeps the stick tracking a finger that slides outside the well.
+    // It throws if the pointer is already gone, which must not take the whole
+    // gesture down with it.
+    try {
+      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    } catch {
+      /* pointer already released — tracking still works without capture */
+    }
     this.update(event);
   }
 

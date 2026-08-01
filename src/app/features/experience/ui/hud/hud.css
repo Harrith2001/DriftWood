@@ -208,6 +208,17 @@
   opacity: 0.25;
 }
 
+/* On touch the joystick and action button own the bottom ~140px of the screen.
+   Both the hints and the proximity prompt have to clear that band, or the pad
+   sits on top of the very text explaining it. */
+.hud--touch .hints {
+  bottom: calc(9.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.hud--touch .prompt {
+  bottom: calc(12.5rem + env(safe-area-inset-bottom, 0px));
+}
+
 .hints__item {
   display: flex;
   align-items: center;
