@@ -38,6 +38,16 @@ export class CameraRig {
 
   /** Smoothed occlusion distance, so brushing past a post does not snap the camera. */
   private occludedDistance = CAM_FOLLOW_DISTANCE;
+  /** Shortest distance seen within the hold window; what the rig eases toward. */
+  private pendingDistance = CAM_FOLLOW_DISTANCE;
+  /** Time left before a longer distance is accepted, in seconds. */
+  private holdTimer = 0;
+  /**
+   * How long a pull-in is held before the camera is allowed back out. Long
+   * enough to bridge the gaps between palm fronds, short enough that stepping
+   * into the open does not feel sticky.
+   */
+  private static readonly OCCLUSION_HOLD = 0.35;
 
   /**
    * Trauma-based shake. Stored as trauma rather than raw offset and applied as
@@ -49,7 +59,14 @@ export class CameraRig {
   private readonly shakeOffset = new THREE.Vector3();
 
   constructor(aspect: number, fov: number, position: THREE.Vector3, target: THREE.Vector3) {
-    this.camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 900);
+    // The near/far ratio decides depth-buffer precision. At 0.1/900 it was
+    // 9000:1, and the palm crowns — dozens of overlapping, double-sided leaf
+    // cards at almost identical depths — z-fought, so leaves flickered as the
+    // camera moved past them. Nothing ever renders closer than a couple of
+    // units (the rig never pulls nearer than CAM_MIN_DISTANCE), and the sky
+    // dome has a radius of 500, so this range is comfortable and roughly
+    // quadruples the precision where it matters.
+    this.camera = new THREE.PerspectiveCamera(fov, aspect, 0.4, 620);
     this.camera.position.copy(position);
     this.camera.lookAt(target);
 
@@ -108,9 +125,32 @@ export class CameraRig {
       }
     }
 
-    // Snap inward quickly (a wall is urgent), ease back out slowly.
-    const easing = allowed < this.occludedDistance ? 0.5 : Math.min(1, delta * 2.2);
-    this.occludedDistance = THREE.MathUtils.lerp(this.occludedDistance, allowed, easing);
+    // Hold the shortest distance seen recently rather than reacting to a single
+    // frame. Palm fronds are thin and full of gaps, so the ray flickers between
+    // hit and miss several times a second as the character walks past a trunk;
+    // acting on each of those made the camera stutter in and out.
+    // The timer is recharged for as long as *anything* is in the way, not only
+    // when the obstruction gets closer. Keying it off "closer than last frame"
+    // meant that during steady occlusion the timer quietly ran down, so by the
+    // time a gap between fronds arrived there was no hold left to absorb it.
+    if (allowed < CAM_FOLLOW_DISTANCE - 0.001) {
+      this.pendingDistance = allowed;
+      this.holdTimer = CameraRig.OCCLUSION_HOLD;
+    } else {
+      this.holdTimer -= delta;
+      if (this.holdTimer <= 0) this.pendingDistance = CAM_FOLLOW_DISTANCE;
+    }
+
+    // Ease both ways. Pulling in is quicker than easing back out — a wall is
+    // urgent, open space is not — but an instant snap inward is what read as a
+    // flash, so even the fast direction is now a smoothed, frame-rate
+    // independent approach rather than a jump.
+    const rate = this.pendingDistance < this.occludedDistance ? 14 : 2.5;
+    this.occludedDistance = THREE.MathUtils.lerp(
+      this.occludedDistance,
+      this.pendingDistance,
+      1 - Math.exp(-rate * delta),
+    );
 
     // Drop the height with the distance, otherwise a pulled-in camera looks
     // down at the character's scalp.
