@@ -11,6 +11,22 @@ import {
 /**
  * Camera rig with occlusion handling.
  *
+ * ── Why there is no occluder fading ─────────────────────────────────────────
+ *
+ * Pulling the camera in is the *only* occlusion technique used here. Fading
+ * whatever stands in the way — the usual companion trick — was tried and
+ * removed, because it cannot work against this particular model.
+ *
+ * Fading needs per-object granularity, and the diorama does not have it: every
+ * palm trunk on the island is a single merged mesh, and the fronds are eight
+ * meshes shared across many trees. Making one occluding frond translucent
+ * therefore dropped every palm on the island to 18% opacity at once, and since
+ * the ray flickers between hit and miss through the gaps in a canopy, the whole
+ * treeline blinked several times a second.
+ *
+ * If foliage ever needs to stop hiding the character, the fix is to split the
+ * meshes in the asset, not to reintroduce a per-mesh fade.
+ *
  * The rig holds a desired position and target which callers set per frame; the
  * camera then eases toward them, so a snapped change of intent still reads as a
  * move rather than a cut.

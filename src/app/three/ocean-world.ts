@@ -23,7 +23,6 @@ import { Beacons } from './world/beacons';
 import { GroundSampler } from './world/ground-sampler';
 import { Character } from './character/character';
 import { CameraRig } from './camera/camera-rig';
-import { OccluderFade } from './camera/occluder-fade';
 import { ArrivalSequence } from './sequences/arrival';
 import { ImpactBurst } from './effects/impact-burst';
 import { WalkController } from './controls/walk-controller';
@@ -69,7 +68,6 @@ export class OceanWorld {
   private character!: Character;
   private impact!: ImpactBurst;
   private arrival!: ArrivalSequence;
-  private occluders = new OccluderFade();
   private groundSampler = new GroundSampler();
   private walk!: WalkController;
   private input!: InputSource;
@@ -132,7 +130,6 @@ export class OceanWorld {
     this.environment = new Environment(assets.island, this.quality);
     this.scene.add(this.environment.root);
     this.rig.setColliders(this.environment.colliders);
-    this.occluders.setTargets(this.environment.colliders);
     // Only real sand and decking — never the water plane or the sea bed.
     this.groundSampler.setTargets(this.environment.walkableSurfaces);
 
@@ -246,7 +243,7 @@ export class OceanWorld {
 
     if (this.phase === 'explore') this.updateExploration(delta);
 
-    this.beacons?.update(delta, this.nearbyHotspot, this.discovered);
+    this.beacons?.update(delta, this.nearbyHotspot, this.discovered, this.rig.camera.position);
 
     // The arrival owns the camera outright; exploration wants a snappier rig.
     this.rig.update(delta, this.phase === 'arrival' ? 9 : 4.5);
@@ -275,9 +272,6 @@ export class OceanWorld {
       delta,
       FOV_EXPLORE,
     );
-
-    // Anything still between the camera and the character goes translucent.
-    this.occluders.update(this.rig.camera, this.walk.positionX, this.walk.positionZ, GROUND_Y);
   }
 
   // ── External control ───────────────────────────────────────────────────────
@@ -320,7 +314,6 @@ export class OceanWorld {
     this.rafId = null;
 
     gsap.killTweensOf(this.scene);
-    this.occluders.reset();
     this.arrival?.dispose();
     this.input?.dispose();
     this.beacons?.dispose();
