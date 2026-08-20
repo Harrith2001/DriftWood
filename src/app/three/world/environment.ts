@@ -37,6 +37,18 @@ export class Environment {
     const center = box.getCenter(new THREE.Vector3());
     this.root.position.set(-center.x, -box.min.y, -center.z);
 
+    // Flush the recentring into every child's world matrix straight away.
+    //
+    // Three's Raycaster does not update world matrices — it reads whatever was
+    // last computed, and matrices are normally only refreshed during a render.
+    // Moving the island above therefore leaves every mesh's matrixWorld
+    // describing where it used to be, and anything that raycasts before the
+    // first frame is measuring the old position. That included the probe that
+    // decides the height the arrival touches down at, whose result is then
+    // cached — so a single stale read put the landing at the wrong height and
+    // kept it there.
+    this.root.updateMatrixWorld(true);
+
     this.root.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
       if (!mesh.isMesh) return;
