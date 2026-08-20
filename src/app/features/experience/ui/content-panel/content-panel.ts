@@ -49,7 +49,15 @@ export class ContentPanel {
     effect(() => {
       if (!this.panelId()) return;
       // Defer past the same tick that created the element.
-      queueMicrotask(() => this.dialog()?.nativeElement.focus());
+      queueMicrotask(() => {
+        const el = this.dialog()?.nativeElement;
+        if (!el) return;
+        // preventScroll matters: the panel is its own scroll container, and
+        // focusing it made the browser scroll it into view, which pushed the
+        // content down and opened every panel below its own title.
+        el.focus({ preventScroll: true });
+        el.scrollTop = 0;
+      });
     });
   }
 

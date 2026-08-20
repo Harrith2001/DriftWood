@@ -14,6 +14,20 @@
   --ink-soft: rgb(255 255 255 / 0.65);
   --ink-faint: rgb(255 255 255 / 0.38);
 
+  /* ── Beach surfaces ───────────────────────────────────────────────────────
+     Panels are sun-bleached driftwood signs rather than dark glass, so they
+     belong to the island the visitor is standing on. Warm paper, ink the colour
+     of wet driftwood, and edges the colour of dry sand. */
+  --paper: #f7efdd;
+  --paper-2: #efe3c9;
+  --paper-3: #e6d7ba;
+  --driftwood: #3a2e24;
+  --driftwood-soft: #6a5947;
+  --driftwood-faint: #8d7a64;
+  --weathered: #cdb794;
+  /* Dusk haze behind an open panel — warm, never a neutral grey. */
+  --scrim: rgb(26 14 8 / 0.58);
+
   /* Type */
   --font-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
