@@ -75,10 +75,16 @@ export class LandingPose {
     this.rotate('spine1', this.axisX, 0.1 * k);
 
     // Thighs swing forward, shins fold back under — the landing squat.
-    this.rotate('leftUpLeg', this.axisX, -0.92 * k);
-    this.rotate('rightUpLeg', this.axisX, -0.92 * k);
-    this.rotate('leftLeg', this.axisX, 1.45 * k);
-    this.rotate('rightLeg', this.axisX, 1.45 * k);
+    //
+    // Both signs matter and both were originally inverted, which read as knees
+    // bending the wrong way: the thigh swung backwards while the shin swung
+    // forwards, i.e. a hyperextended knee. A knee only folds one way, so the
+    // test alongside this asserts the joint geometry rather than the numbers —
+    // knee ahead of hip, ankle never ahead of knee.
+    this.rotate('leftUpLeg', this.axisX, 0.92 * k);
+    this.rotate('rightUpLeg', this.axisX, 0.92 * k);
+    this.rotate('leftLeg', this.axisX, -1.45 * k);
+    this.rotate('rightLeg', this.axisX, -1.45 * k);
 
     // One arm braced toward the ground, the other trailing back for balance.
     this.rotate('rightArm', this.axisZ, -0.75 * k);

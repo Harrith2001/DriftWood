@@ -32,6 +32,47 @@ describe('LandingPose', () => {
     return root;
   }
 
+  /**
+   * Guards the sign relationship that produced visibly backwards knees.
+   *
+   * Which world direction counts as "forwards" depends on the rig's bind
+   * orientation, which a synthetic skeleton cannot honestly reproduce — so this
+   * does not try to assert an absolute direction. What it does pin down is the
+   * relationship between the two joints, which is where the bug lived: a knee
+   * is a hinge, so the shin must counter-rotate against the thigh's swing. When
+   * both rotated the same way the joint hyperextended.
+   *
+   * The absolute direction was confirmed against the real rig by measuring
+   * joint positions in the running scene: with the character facing +X the knee
+   * sits 0.39 forward of the hip and the ankle 0.33 behind the knee.
+   */
+  it('counter-rotates the shin against the thigh so the knee folds', () => {
+    const rig = makeRig((n) => `mixamorig${n}`);
+    const thigh = rig.children.find((c) => c.name === 'mixamorigLeftUpLeg')!;
+    const shin = rig.children.find((c) => c.name === 'mixamorigLeftLeg')!;
+
+    new LandingPose(rig).apply(1);
+
+    const thighX = new THREE.Euler().setFromQuaternion(thigh.quaternion, 'XYZ').x;
+    const shinX = new THREE.Euler().setFromQuaternion(shin.quaternion, 'XYZ').x;
+
+    expect(Math.abs(thighX)).toBeGreaterThan(0.2);
+    expect(Math.abs(shinX)).toBeGreaterThan(0.2);
+    // Opposite signs: the shin folds back as the thigh swings up.
+    expect(Math.sign(thighX)).toBe(-Math.sign(shinX));
+    // And the shin folds further than the thigh swings, tucking the heel under.
+    expect(Math.abs(shinX)).toBeGreaterThan(Math.abs(thighX));
+  });
+
+  it('applies the same fold to both legs', () => {
+    const rig = makeRig((n) => `mixamorig${n}`);
+    new LandingPose(rig).apply(1);
+
+    const left = rig.children.find((c) => c.name === 'mixamorigLeftLeg')!;
+    const right = rig.children.find((c) => c.name === 'mixamorigRightLeg')!;
+    expect(left.quaternion.angleTo(right.quaternion)).toBeLessThan(1e-6);
+  });
+
   it('resolves every bone on a colon-prefixed rig', () => {
     const pose = new LandingPose(makeRig((n) => `mixamorig:${n}`));
     expect(pose.resolvedBones.length).toBe(11);
