@@ -168,7 +168,7 @@ export class Experience implements AfterViewInit, OnDestroy {
   /** Walks the character to a hotspot chosen from the HUD list. */
   protected jumpTo(id: PanelId): void {
     const spot = HOTSPOTS.find((h) => h.id === id);
-    if (spot) this.world?.teleportToHotspot(spot.x, spot.z);
+    if (spot) this.world?.teleportToHotspot(spot.x, spot.z, spot.y);
     this.openPanel(id);
   }
 

@@ -11,7 +11,7 @@ import {
   GROUND_Y,
   LANDING,
   SKY_Y,
-  YAW_INLAND,
+  YAW_STREET,
 } from '../core/world/world.config';
 import { RenderPipeline } from './engine/renderer';
 import { AssetLoader } from './loading/asset-loader';
@@ -108,12 +108,12 @@ export class OceanWorld {
     // assets stream in, so the first frame is never a black canvas.
     this.tick();
 
-    let assets: Record<'island' | 'character' | 'idle' | 'walk' | 'fall', GLTF>;
+    let assets: Record<'city' | 'character' | 'idle' | 'walk' | 'fall', GLTF>;
     try {
       const loader = new AssetLoader((p) => this.callbacks.onLoadProgress(p));
       assets = await loader.loadAll([
         // Weights approximate the byte sizes so the bar moves at a sane rate.
-        { key: 'island', url: ASSETS.island, weight: 10 },
+        { key: 'city', url: ASSETS.city, weight: 10 },
         { key: 'character', url: ASSETS.character, weight: 4 },
         { key: 'idle', url: ASSETS.animations.idle, weight: 1 },
         { key: 'walk', url: ASSETS.animations.walk, weight: 1 },
@@ -121,16 +121,16 @@ export class OceanWorld {
       ]);
     } catch (error) {
       this.callbacks.onLoadError(
-        error instanceof Error ? error.message : 'The island could not be loaded.',
+        error instanceof Error ? error.message : 'The city could not be loaded.',
       );
       return;
     }
     if (this.disposed) return;
 
-    this.environment = new Environment(assets.island, this.quality);
+    this.environment = new Environment(assets.city, this.quality);
     this.scene.add(this.environment.root);
     this.rig.setColliders(this.environment.colliders);
-    // Only real sand and decking — never the water plane or the sea bed.
+    // Roads, yards and pavements only — never a rooftop or an interior floor.
     this.groundSampler.setTargets(this.environment.walkableSurfaces);
 
     this.character = new Character(
@@ -154,14 +154,14 @@ export class OceanWorld {
       this.character,
       LANDING.x,
       LANDING.z,
-      YAW_INLAND,
+      YAW_STREET,
       this.groundSampler,
     );
     this.input = new InputSource();
     this.input.setEnabled(false); // no walking until touchdown
 
-    // Probe the deck once so the arrival touches down on the real surface.
-    const landingY = this.groundSampler.heightAt(LANDING.x, LANDING.z) ?? GROUND_Y;
+    // Probe the roadway once so the arrival touches down on the real surface.
+    const landingY = this.groundSampler.heightAt(LANDING.x, LANDING.z, GROUND_Y) ?? GROUND_Y;
     this.arrival = new ArrivalSequence(
       this.character,
       this.rig,
@@ -214,12 +214,14 @@ export class OceanWorld {
 
     this.phase = 'explore';
     this.character.setCrouch(0);
-    this.walk.reset(LANDING.x, LANDING.z, YAW_INLAND);
+    this.walk.reset(LANDING.x, LANDING.z, YAW_STREET);
     this.character.snapTo('idle');
 
     // Seat the camera behind the character before the first explore frame, so
     // control does not begin with a lurch from the landing shot.
-    this.rig.followCharacter(LANDING.x, LANDING.z, YAW_INLAND, 1 / 60, FOV_EXPLORE);
+    this.rig.followCharacter(
+      LANDING.x, LANDING.z, YAW_STREET, 1 / 60, FOV_EXPLORE, this.walk.surfaceY,
+    );
     if (immediate) this.rig.snap();
 
     this.input.setEnabled(true);
@@ -271,6 +273,7 @@ export class OceanWorld {
       this.walk.facing,
       delta,
       FOV_EXPLORE,
+      this.walk.surfaceY,
     );
   }
 
@@ -294,11 +297,18 @@ export class OceanWorld {
     this.input?.queueInteract();
   }
 
-  /** Walks the visitor's view to a hotspot without them having to find it. */
-  teleportToHotspot(x: number, z: number): void {
+  /**
+   * Walks the visitor's view to a hotspot without them having to find it.
+   *
+   * `y` is the hotspot's measured road height, and is needed rather than
+   * convenient: the ground probe searches a narrow band around the height it is
+   * given so it can tell a road from the roof of the house below it, and the
+   * four hotspots are spread over three metres of hillside.
+   */
+  teleportToHotspot(x: number, z: number, y: number): void {
     if (this.phase !== 'explore') return;
-    this.walk.reset(x, z, YAW_INLAND);
-    this.rig.followCharacter(x, z, YAW_INLAND, 1 / 60, FOV_EXPLORE);
+    this.walk.reset(x, z, YAW_STREET, y);
+    this.rig.followCharacter(x, z, YAW_STREET, 1 / 60, FOV_EXPLORE, this.walk.surfaceY);
   }
 
   resize(): void {

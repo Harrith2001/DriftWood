@@ -1,12 +1,13 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   The panel is a sun-bleached driftwood sign, not a dark glass card.
-   It sits on an island at sunset, so it is warm paper with ink the colour of wet
-   driftwood — the same world the visitor is standing in.
+   The panel is a painted plaster wall, not a dark glass card.
+   It stands in a street at dusk where every facade is limewashed render over
+   block, so it is warm plaster with ink the colour of wet concrete and a
+   hand-brushed band under the heading — the same world the visitor is in.
 
    The per-hotspot accent still carries each location's identity, but only as
-   decoration: borders, the rule under the title, tag edges. As *text* it is
-   darkened with color-mix, because cyan or amber type on pale sand would fail
-   contrast outright.
+   decoration: borders, the band under the title, tag edges. As *text* it is
+   darkened with color-mix, because cyan or amber type on pale plaster would
+   fail contrast outright.
    ───────────────────────────────────────────────────────────────────────────── */
 
 .scrim {
@@ -30,17 +31,17 @@
   overscroll-behavior: contain;
   padding: clamp(1.75rem, 4vw, 3rem);
 
-  /* Grain over a sand gradient: paper left in the sun, not a flat fill. The
-     noise is a data URI so the panel stays self-contained. */
-  background-color: var(--paper, #f7efdd);
+  /* Mottle over a plaster gradient: a wall that has been repainted a few times,
+     not a flat fill. The noise is a data URI so the panel stays self-contained. */
+  background-color: var(--plaster, #f2ece0);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E"),
-    linear-gradient(160deg, var(--paper, #f7efdd) 0%, var(--paper-2, #efe3c9) 55%, var(--paper-3, #e6d7ba) 100%);
+    linear-gradient(160deg, var(--plaster, #f2ece0) 0%, var(--plaster-2, #e9e1d1) 55%, var(--plaster-3, #ded4c1) 100%);
   background-size: 180px 180px, auto;
   background-blend-mode: soft-light, normal;
 
-  border: 1px solid var(--weathered, #cdb794);
-  /* The hotspot's colour, like a painted edge on a weathered board. */
+  border: 1px solid var(--trim, #c4b7a3);
+  /* The hotspot's colour, like a painted trim along the top of the wall. */
   border-top: 3px solid var(--accent-panel, #5ecfff);
   border-radius: 14px;
   box-shadow:
@@ -63,8 +64,8 @@
   font-size: 0.625rem;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  /* Darkened accent: keeps each location's hue, but readable on sand. */
-  color: color-mix(in oklab, var(--accent-panel, #5ecfff) 45%, #2f241b);
+  /* Darkened accent: keeps each location's hue, but readable on plaster. */
+  color: color-mix(in oklab, var(--accent-panel, #5ecfff) 45%, #2b2823);
 }
 
 /* A painted tick of the hotspot's own colour, like a marker on a signpost. */
@@ -85,14 +86,15 @@
   font-size: clamp(1.75rem, 5vw, 2.75rem);
   line-height: 1.05;
   letter-spacing: -0.02em;
-  color: var(--driftwood, #3a2e24);
+  color: var(--panel-ink, #33302b);
 
-  /* A shoreline under the heading: a repeating wave rather than a plain rule. */
+  /* The painted band every building on this street wears along its base: a
+     brushed stripe that wavers slightly, rather than a ruled line. */
   border-bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='6' viewBox='0 0 40 6'%3E%3Cpath d='M0 3 q5 -3 10 0 t10 0 t10 0 t10 0' fill='none' stroke='%23cdb794' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='6' viewBox='0 0 60 6'%3E%3Cpath d='M0 3.4 q7 -1 15 -0.3 t15 0.5 t15 -0.6 t15 0.3' fill='none' stroke='%23c4b7a3' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: repeat-x;
   background-position: left bottom;
-  background-size: 40px 6px;
+  background-size: 60px 6px;
 }
 
 /* ── Body ── */
@@ -101,7 +103,7 @@
   max-width: 40rem;
   font-size: clamp(0.875rem, 1.6vw, 1rem);
   line-height: 1.75;
-  color: var(--driftwood-soft, #6a5947);
+  color: var(--panel-ink-soft, #5c554b);
   /* Copy in the content file is written as indented template literals. */
   white-space: pre-line;
 }
@@ -112,9 +114,9 @@
   padding: 0;
   display: grid;
   gap: 1px;
-  /* The gap colour shows through as a hairline between weathered boards. */
-  background: var(--weathered, #cdb794);
-  border: 1px solid var(--weathered, #cdb794);
+  /* The gap colour shows through as a mortar line between panels. */
+  background: var(--trim, #c4b7a3);
+  border: 1px solid var(--trim, #c4b7a3);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -143,7 +145,7 @@
   font-family: var(--font-display, sans-serif);
   font-size: 1rem;
   font-weight: 600;
-  color: var(--driftwood, #3a2e24);
+  color: var(--panel-ink, #33302b);
 }
 
 .item__meta {
@@ -151,14 +153,14 @@
   font-size: 0.625rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--accent-panel, #5ecfff) 45%, #2f241b);
+  color: color-mix(in oklab, var(--accent-panel, #5ecfff) 45%, #2b2823);
 }
 
 .item__description {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.65;
-  color: var(--driftwood-soft, #6a5947);
+  color: var(--panel-ink-soft, #5c554b);
 }
 
 .tags {
@@ -170,20 +172,20 @@
   padding: 0;
 }
 
-/* Sea glass: tumbled, translucent, tinted by the location's own colour. */
+/* Enamel: the painted tin signage nailed up all along this street. */
 .tag {
   padding: 0.24rem 0.6rem;
-  border: 1px solid color-mix(in oklab, var(--accent-panel, #5ecfff) 40%, var(--weathered, #cdb794));
+  border: 1px solid color-mix(in oklab, var(--accent-panel, #5ecfff) 40%, var(--trim, #c4b7a3));
   border-radius: 999px;
   background: color-mix(in oklab, var(--accent-panel, #5ecfff) 12%, transparent);
   font-family: var(--font-mono, monospace);
-  /* Was 9px in the faint driftwood tone, which measured 3.89:1 against the
-     board — under the 4.5:1 needed at this size. Tags name real technologies,
+  /* Was 9px in the faint tone, which measured 3.89:1 against the
+     wall — under the 4.5:1 needed at this size. Tags name real technologies,
      so they get a readable size and the body text's ink. */
   font-size: 0.625rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--driftwood-soft, #6a5947);
+  color: var(--panel-ink-soft, #5c554b);
 }
 
 /* ── Links ── */
@@ -202,21 +204,49 @@
   font-family: var(--font-mono, monospace);
   font-size: 0.8125rem;
   letter-spacing: 0.06em;
-  color: var(--driftwood, #3a2e24);
+  color: var(--panel-ink, #33302b);
   text-decoration: none;
-  border-bottom: 1px solid var(--weathered, #cdb794);
+  border-bottom: 1px solid var(--trim, #c4b7a3);
   transition: color 200ms ease, border-color 200ms ease, padding-left 200ms ease;
 }
 
 .link:hover {
-  color: color-mix(in oklab, var(--accent-panel, #5ecfff) 55%, #2f241b);
+  color: color-mix(in oklab, var(--accent-panel, #5ecfff) 55%, #2b2823);
   border-color: var(--accent-panel, #5ecfff);
   padding-left: 0.4rem;
 }
 
 .link:focus-visible {
-  outline: 2px solid color-mix(in oklab, var(--accent-panel, #5ecfff) 60%, #2f241b);
+  outline: 2px solid color-mix(in oklab, var(--accent-panel, #5ecfff) 60%, #2b2823);
   outline-offset: 3px;
+}
+
+/* ── Credits ──
+   Small print, but a licence condition rather than a courtesy, so it stays
+   legible: 11px at 4.9:1 against the plaster, not a grey whisper. */
+.credits {
+  margin: 1.75rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--trim, #c4b7a3);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.credits__link {
+  color: var(--panel-ink-soft, #5c554b);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--trim, #c4b7a3);
+}
+
+.credits__link:hover {
+  color: var(--panel-ink, #33302b);
+  text-decoration-color: currentColor;
+}
+
+.credits__link:focus-visible {
+  outline: 2px solid var(--panel-ink, #33302b);
+  outline-offset: 2px;
 }
 
 /* ── Close ── */
@@ -229,22 +259,22 @@
   gap: 0.4rem;
   padding: 0.45rem 0.7rem;
   background: rgb(255 255 255 / 0.5);
-  border: 1px solid var(--weathered, #cdb794);
+  border: 1px solid var(--trim, #c4b7a3);
   border-radius: 8px;
   cursor: pointer;
   font-family: var(--font-mono, monospace);
   font-size: 0.6875rem;
-  color: var(--driftwood-soft, #6a5947);
+  color: var(--panel-ink-soft, #5c554b);
   transition: background-color 200ms ease, color 200ms ease;
 }
 
 .panel__close:hover {
   background: rgb(255 255 255 / 0.9);
-  color: var(--driftwood, #3a2e24);
+  color: var(--panel-ink, #33302b);
 }
 
 .panel__close:focus-visible {
-  outline: 2px solid var(--driftwood, #3a2e24);
+  outline: 2px solid var(--panel-ink, #33302b);
   outline-offset: 2px;
 }
 

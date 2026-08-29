@@ -1,8 +1,8 @@
 # Driftwood
 
-An interactive 3D portfolio. You arrive by freefall — a cinematic drop onto a
-pier, ending in a hard landing — and then take the controls and explore the
-island on foot to find the work.
+An interactive 3D portfolio. You arrive by freefall — a cinematic drop into a
+street in Lima at dusk, ending in a hard landing — and then take the controls
+and explore the neighbourhood on foot to find the work.
 
 Built with Angular 20, Three.js and GSAP.
 
@@ -34,9 +34,9 @@ src/app/
 │   └── world/        world coordinates, camera keyframes, hotspots
 ├── three/
 │   ├── engine/       renderer + post-processing chain
-│   ├── world/        sky, clouds, lighting, island, beacons, ground probe
+│   ├── world/        sky, clouds, lighting, city, beacons, ground probe
 │   ├── character/    mesh, animation retargeting, procedural landing crouch
-│   ├── camera/       third-person rig, occlusion pull-in, occluder fading
+│   ├── camera/       third-person rig, occlusion pull-in
 │   ├── controls/     walk controller, keyboard/touch input
 │   ├── sequences/    the cinematic arrival
 │   └── effects/      impact dust and shockwave
@@ -91,13 +91,19 @@ animation files entirely, and resizes and re-encodes the rest.
 | walk | 95.7 MB | 0.09 MB |
 | fall | 55.1 MB | 0.07 MB |
 | character | 55.6 MB | 5.7 MB |
-| island | ~80 MB | 12.2 MB |
-| **total** | **~342 MB** | **19 MB** |
+| city | ~30 MB | 3.1 MB |
+| **total** | **~292 MB** | **9.4 MB** |
 
 Textures are JPEG or PNG, chosen per texture by measuring whether the alpha
 channel is actually used. Not WebP: `EXT_texture_webp` silently drops every
-texture on any runtime that cannot decode it, which renders the whole diorama
+texture on any runtime that cannot decode it, which renders the whole scene
 flat white.
+
+The city also arrives using the legacy specular/glossiness workflow, which
+Three.js no longer loads. `metalRough()` converts it during the build; without
+that step every diffuse texture stays stranded inside an extension the loader
+ignores, and the model renders in flat untextured colour with nothing but a
+console warning to say why.
 
 ## Notes for future work
 
@@ -109,9 +115,31 @@ A few things in here are load-bearing and easy to break:
   time and covered by tests — those tests are the guard rail.
 - **Ground probing** (`three/world/ground-sampler.ts`). Walkability is sampled
   from the real geometry against an allow-list of standable materials, not from
-  hand-measured rectangles: the sand rectangle overhangs the shoreline, and the
-  water plane sits at almost the same height as the beach.
-- **Occluder fading** (`three/camera/occluder-fade.ts`) swaps a *mesh's*
-  material for a translucent clone. Never mutate the material in place —
-  materials are shared across dozens of meshes, so one railing in the way would
-  turn the entire island transparent.
+  hand-measured rectangles. The probe window travels with the character, because
+  the playable streets climb and fall by 25 metres and several rooftops sit at
+  exactly the height of a road one street over.
+- **The walkability map** (`tools/dev/probe-city.mjs` → `core/world/city-blockers.ts`).
+  Where you can walk is read off the mesh, not drawn over a screenshot. The probe
+  rasterises every triangle onto a grid, flood-fills to find what is reachable on
+  foot, and emits the blocked rectangles as a generated file. Re-run it after
+  changing the model — and keep its `WALKABLE` set in step with
+  `WALKABLE_SURFACE` in `three/world/environment.ts`, since the two answer the
+  same question in different places.
+- **Why the blockers are baked and not probed.** Most buildings here are modelled
+  from below the roadway up through it, so a raycast through the space the body
+  would occupy sits strictly inside the solid with no face along it to hit. There
+  is nothing to fix by tuning the cast — surfaces are all a ray can find.
+  Rasterising offline knows the full vertical span of a cell and has no such
+  blind spot.
+- **No occluder fading.** Pulling the camera in is the only occlusion technique
+  used. Fading needs per-object granularity that downloaded environments rarely
+  have — see the note in `three/camera/camera-rig.ts` for what that cost last
+  time.
+
+## Credits
+
+The environment is ["Popular Streets of Lima | PS1 Environment"](https://sketchfab.com/3d-models/popular-streets-of-lima-ps1-environment-d914a9adf2e24635a5310c909800009d)
+by [McPato](https://sketchfab.com/McPato), licensed under
+[CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Commercial use is
+permitted and attribution is required, so the credit also appears in the About
+panel of the site itself — keep it there.

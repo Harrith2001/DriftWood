@@ -4,27 +4,47 @@ import type { Hotspot, Region } from '../models/experience.model';
 /**
  * Every hard-coded world coordinate lives here.
  *
- * The values were measured against the beach diorama from a bird's-eye render,
- * so they are tied to that model's scale and origin. If the environment model
- * is ever swapped, this file is the only place that needs re-measuring.
+ * The values are measured against the city model by `tools/dev/probe-city.mjs`,
+ * which rasterises the real triangles onto a grid and flood-fills the result, so
+ * these numbers describe ground the character can genuinely reach rather than a
+ * rectangle drawn over a screenshot. Re-run that script after swapping the model
+ * and copy its output back here.
  */
-
-/** Ground plane height. Pier deck sits at ~2.79, sand at ~2.88. */
-export const GROUND_Y = 2.8;
-
-/** Feet height where the arrival begins. */
-export const SKY_Y = 36;
 
 /**
- * Landing column — the open (seaward) end of the pier. Deliberately out over
- * the water so the touchdown shot frames the island instead of a palm trunk.
+ * Where the model is seated, chosen so the plaza centre is the world origin with
+ * its road surface at y=0.
+ *
+ * Deliberately explicit rather than "recentre on the bounding box". The scene is
+ * a hillside that drops 63 metres from rooftop to the bottom of the valley, so
+ * centring it on its own bounds would have parked the playable street some 30
+ * units up and 60 out, and every coordinate below would have had to carry that
+ * accident around.
  */
-export const LANDING = { x: 5.0, z: 0.7 } as const;
+export const MODEL_OFFSET = new THREE.Vector3(29, 2.2, -6);
 
-/** Facing (yaw) the character holds during the intro portrait: toward +X, i.e. the viewer. */
-export const YAW_PORTRAIT = Math.PI / 2;
-/** Facing after touchdown: toward -X, i.e. inland, ready to walk. */
-export const YAW_INLAND = -Math.PI / 2;
+/** Road surface across the plaza. The ground probe supersedes this everywhere it can. */
+export const GROUND_Y = 0;
+
+/** Feet height where the arrival begins — well clear of the tallest roofline (~36). */
+export const SKY_Y = 58;
+
+/**
+ * Landing column — the middle of the plaza, the one place with 30 metres of
+ * clear ground in every direction and no overhang to fall through.
+ */
+export const LANDING = { x: 0, z: 2 } as const;
+
+/** Facing during the intro portrait: toward -Z, i.e. the camera. */
+export const YAW_PORTRAIT = Math.PI;
+/**
+ * Facing after touchdown: toward +Z, up the hill.
+ *
+ * The same side as the intro camera, so handing control over is a settle rather
+ * than a whip-pan, and it puts the stacked hillside houses dead ahead — the
+ * single most characteristic view in the model.
+ */
+export const YAW_STREET = 0;
 
 // ── Camera keyframes ─────────────────────────────────────────────────────────
 
@@ -36,7 +56,7 @@ export const YAW_INLAND = -Math.PI / 2;
  * headroom above and space for the title block. Aimed at mid-torso with the
  * camera slightly above it, which reads as eye contact rather than a low angle.
  */
-export const CAM_INTRO_POS = new THREE.Vector3(LANDING.x + 3.6, SKY_Y + 1.35, LANDING.z + 0.55);
+export const CAM_INTRO_POS = new THREE.Vector3(LANDING.x + 0.55, SKY_Y + 1.35, LANDING.z - 3.6);
 export const CAM_INTRO_TARGET = new THREE.Vector3(LANDING.x, SKY_Y + 1.05, LANDING.z);
 export const FOV_INTRO = 40;
 
@@ -46,25 +66,29 @@ export const FOV_EXPLORE = 58;
 // ── Walkable ground ──────────────────────────────────────────────────────────
 
 /**
- * Walkable areas. A position is valid when it falls inside at least one of
- * these and outside every blocker below.
+ * Outer fence for the playable area — the plaza plus the street that descends
+ * away from it to the north.
+ *
+ * This is a boundary, not a map. On the beach these rectangles tried to describe
+ * the walkable surface itself and cost a long run of bugs: one overhung the
+ * shoreline, two abutting ones left a dead seam, and none of them knew about the
+ * water. Here the geometry answers that question directly — the rectangle only
+ * stops the visitor wandering the full 284 metres of hillside into parts of the
+ * model that were never dressed for a close look.
  */
 export const WALKABLE: readonly Region[] = [
-  // Pier decking, running seaward from the beach.
-  { minX: 0.3, maxX: 7.65, minZ: -1.09, maxZ: 2.5 },
-  // The sand belt across the front of the island.
-  { minX: -11.0, maxX: 0.3, minZ: -10.0, maxZ: 10.0 },
+  { minX: -19, maxX: 19, minZ: -34, maxZ: 15 },
 ];
 
-/** Solid geometry the character must not walk through. */
-export const BLOCKERS: readonly Region[] = [
-  // Main beach house footprint.
-  { minX: -8.71, maxX: -3.71, minZ: -6.14, maxZ: 0.36 },
-  // Changing cabin.
-  { minX: -7.28, maxX: -4.37, minZ: 3.34, maxZ: 5.21 },
-];
+/**
+ * Places inside those bounds that have a road surface but cannot be stood on.
+ *
+ * Generated, not measured — see `city-blockers.ts` for why they have to be baked
+ * rather than probed each frame.
+ */
+export { BLOCKERS } from './city-blockers';
 
-/** Keeps the character a body-width clear of blocker walls and water edges. */
+/** Keeps the character a body-width clear of kerbs and walls. */
 export const BODY_RADIUS = 0.45;
 
 // ── Movement ─────────────────────────────────────────────────────────────────
@@ -77,12 +101,8 @@ export const TURN_SPEED = 2.9; // radians / second
 
 export const CAM_FOLLOW_DISTANCE = 6.0;
 /**
- * Height above the ground plane, not above the character.
- *
- * Kept deliberately low: at 4.3 the rig sat around y=7, which is exactly the
- * height of the palm crowns, so walking inland parked the camera inside a
- * canopy. Sitting below the fronds also gives the flatter, over-the-shoulder
- * framing that reads as a game camera rather than a drone.
+ * Height above the ground plane, not above the character. Low enough to stay
+ * under the first-floor balconies that overhang most of the street.
  */
 export const CAM_FOLLOW_HEIGHT = 2.7;
 /** How far in front of the character the rig aims. */
@@ -94,39 +114,45 @@ export const CAM_MIN_DISTANCE = 2.6;
 // ── Hotspots ─────────────────────────────────────────────────────────────────
 
 /**
- * Discoverable locations. Each sits on walkable ground beside the landmark it
- * describes, clear of the blocker rectangles above.
+ * Discoverable locations, all verified by the probe to sit on reachable,
+ * near-level ground. Colours read as street lighting rather than as UI: the
+ * model's own emissive materials are sodium orange and white, so these sit in
+ * the same family.
  */
 export const HOTSPOTS: readonly Hotspot[] = [
   {
     id: 'projects',
     label: 'Projects',
-    x: 2.4,
-    z: 0.7, // pier decking, between the landing point and the beach
+    x: -10,
+    z: 2, // west side of the plaza
+    y: 0.0,
     radius: 1.9,
     color: 0x5ecfff,
   },
   {
     id: 'about',
     label: 'About',
-    x: -2.6,
-    z: -2.4, // sand east of the beach house
+    x: 10,
+    z: -1, // east side, below the tenement block
+    y: 0.84,
     radius: 1.9,
-    color: 0xffb703,
+    color: 0xffa53d,
   },
   {
     id: 'skills',
     label: 'Skills',
-    x: -3.2,
-    z: 4.4, // sand east of the changing cabin
+    x: -8,
+    z: 8, // outside the shopfronts on the north side
+    y: 0.2,
     radius: 1.9,
-    color: 0xa78bfa,
+    color: 0xc08bff,
   },
   {
     id: 'contact',
     label: 'Contact',
-    x: -1.6,
-    z: -7.2, // quiet south end of the beach
+    x: -2,
+    z: -22, // down the street that descends to the north
+    y: -1.16,
     radius: 1.9,
     color: 0xff6b6b,
   },
@@ -140,7 +166,7 @@ export const HOTSPOTS: readonly Hotspot[] = [
  * textures — and are retargeted onto the shared character at load time.
  */
 export const ASSETS = {
-  island: 'assets/models/island.glb',
+  city: 'assets/models/city.glb',
   character: 'assets/models/character.glb',
   animations: {
     idle: 'assets/models/anim-idle.glb',

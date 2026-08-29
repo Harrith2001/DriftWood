@@ -34,7 +34,7 @@ describe('Beacons', () => {
     beacons.dispose();
   });
 
-  it('shows the light shaft from across the island', () => {
+  it('shows the light shaft from across the plaza', () => {
     const beacons = new Beacons();
     const mat = settle(beacons, 25);
     expect(mat.opacity).toBeGreaterThan(0.03);

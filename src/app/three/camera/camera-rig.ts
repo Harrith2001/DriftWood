@@ -17,15 +17,17 @@ import {
  * whatever stands in the way — the usual companion trick — was tried and
  * removed, because it cannot work against this particular model.
  *
- * Fading needs per-object granularity, and the diorama does not have it: every
- * palm trunk on the island is a single merged mesh, and the fronds are eight
- * meshes shared across many trees. Making one occluding frond translucent
- * therefore dropped every palm on the island to 18% opacity at once, and since
- * the ray flickers between hit and miss through the gaps in a canopy, the whole
- * treeline blinked several times a second.
+ * Fading needs per-object granularity, and downloaded environments rarely have
+ * it. On the beach model this bit hard: every palm trunk was one merged mesh and
+ * the fronds were eight meshes shared across many trees, so making a single
+ * occluding frond translucent dropped every palm at once — and because the ray
+ * flickers between hit and miss through the gaps in a canopy, the whole treeline
+ * blinked several times a second.
  *
- * If foliage ever needs to stop hiding the character, the fix is to split the
- * meshes in the asset, not to reintroduce a per-mesh fade.
+ * This city is meshed far more finely, so the trap is less likely here. It is
+ * still a trap: if scenery ever needs to stop hiding the character, check what
+ * a mesh actually contains before fading it, and split the asset if it turns out
+ * to be shared.
  *
  * The rig holds a desired position and target which callers set per frame; the
  * camera then eases toward them, so a snapped change of intent still reads as a
@@ -33,8 +35,8 @@ import {
  *
  * `followCharacter` additionally casts a ray from the character out to the ideal
  * camera position and pulls the camera in front of whatever it hits. Without
- * this the third-person camera walked straight into the beach house and the
- * palm trunks as the visitor moved inland, filling the screen with roof tiles.
+ * this the third-person camera walked straight into shopfronts and parked cars
+ * as the visitor moved up the street, filling the screen with brickwork.
  */
 export class CameraRig {
   readonly camera: THREE.PerspectiveCamera;
@@ -60,7 +62,7 @@ export class CameraRig {
   private holdTimer = 0;
   /**
    * How long a pull-in is held before the camera is allowed back out. Long
-   * enough to bridge the gaps between palm fronds, short enough that stepping
+   * enough to bridge the gaps in railings and cabling, short enough that stepping
    * into the open does not feel sticky.
    */
   private static readonly OCCLUSION_HOLD = 0.35;
@@ -76,7 +78,7 @@ export class CameraRig {
 
   constructor(aspect: number, fov: number, position: THREE.Vector3, target: THREE.Vector3) {
     // The near/far ratio decides depth-buffer precision. At 0.1/900 it was
-    // 9000:1, and the palm crowns — dozens of overlapping, double-sided leaf
+    // 9000:1, and the overlapping double-sided facades and awnings — dozens of
     // cards at almost identical depths — z-fought, so leaves flickered as the
     // camera moved past them. Nothing ever renders closer than a couple of
     // units (the rig never pulls nearer than CAM_MIN_DISTANCE), and the sky
@@ -106,17 +108,30 @@ export class CameraRig {
   /**
    * Places the rig behind a character facing `yaw`, pulling in when geometry
    * blocks the line of sight.
+   *
+   * `groundY` is the surface the character is standing on, and every height here
+   * is measured from it rather than from the world's nominal ground constant.
+   * That constant describes the plaza and nothing else: the playable streets fall
+   * away by several metres, so anchoring to it left the camera floating high
+   * above the character and aiming over his head the moment he walked downhill.
    */
-  followCharacter(x: number, z: number, yaw: number, delta: number, fov: number): void {
+  followCharacter(
+    x: number,
+    z: number,
+    yaw: number,
+    delta: number,
+    fov: number,
+    groundY: number = GROUND_Y,
+  ): void {
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
 
     // Ray starts at roughly chest height so it is not blocked by the ground.
-    this.tmpOrigin.set(x, GROUND_Y + 1.4, z);
+    this.tmpOrigin.set(x, groundY + 1.4, z);
     // Ideal seat: straight back along the facing vector, raised.
     this.tmpIdeal.set(
       x - sin * CAM_FOLLOW_DISTANCE,
-      GROUND_Y + CAM_FOLLOW_HEIGHT,
+      groundY + CAM_FOLLOW_HEIGHT,
       z - cos * CAM_FOLLOW_DISTANCE,
     );
 
@@ -142,7 +157,7 @@ export class CameraRig {
     }
 
     // Hold the shortest distance seen recently rather than reacting to a single
-    // frame. Palm fronds are thin and full of gaps, so the ray flickers between
+    // frame. Railings and power lines are thin and full of gaps, so the ray flickers between
     // hit and miss several times a second as the character walks past a trunk;
     // acting on each of those made the camera stutter in and out.
     // The timer is recharged for as long as *anything* is in the way, not only
@@ -173,10 +188,10 @@ export class CameraRig {
     const heightScale = this.occludedDistance / CAM_FOLLOW_DISTANCE;
     this.desiredPosition.set(
       x - sin * this.occludedDistance,
-      GROUND_Y + CAM_FOLLOW_HEIGHT * Math.max(0.55, heightScale),
+      groundY + CAM_FOLLOW_HEIGHT * Math.max(0.55, heightScale),
       z - cos * this.occludedDistance,
     );
-    this.desiredTarget.set(x + sin * CAM_LOOK_AHEAD, GROUND_Y + CAM_LOOK_HEIGHT, z + cos * CAM_LOOK_AHEAD);
+    this.desiredTarget.set(x + sin * CAM_LOOK_AHEAD, groundY + CAM_LOOK_HEIGHT, z + cos * CAM_LOOK_AHEAD);
     this.desiredFov = fov;
   }
 

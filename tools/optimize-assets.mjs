@@ -13,13 +13,13 @@
  *   anim-idle.glb   skeleton + animation only (meshes/materials/textures stripped)
  *   anim-walk.glb   ""
  *   anim-fall.glb   ""
- *   island.glb      environment diorama, compressed
+ *   city.glb        environment, compressed
  *
  * Re-run it whenever a raw asset changes. Output is deterministic.
  */
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { dedup, prune, resample, quantize, weld } from '@gltf-transform/functions';
+import { dedup, metalRough, prune, resample, quantize, weld } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import sharp from 'sharp';
 import { mkdir, stat } from 'node:fs/promises';
@@ -156,6 +156,15 @@ async function buildMesh(src, dest, label, { textureSize, dropMaps = [] } = {}) 
   for (const anim of root.listAnimations()) anim.dispose();
 
   await doc.transform(
+    // Convert the legacy specular/glossiness workflow to metallic/roughness.
+    //
+    // Not optional. Three.js removed its `KHR_materials_pbrSpecularGlossiness`
+    // loader, and older Sketchfab exports — the city among them — keep their
+    // diffuse texture *inside* that extension. The loader skips what it does not
+    // recognise, leaving `pbrMetallicRoughness` with no base colour texture at
+    // all, so the model arrives geometrically perfect and completely untextured:
+    // flat tan roads, flat grey buildings, one warning in the console.
+    metalRough(),
     weld(),
     dedup(),
     prune({ keepLeaves: true }),
@@ -189,13 +198,15 @@ await buildMesh('Offensive Idle.glb', 'character.glb', 'character', {
   textureSize: 1536,
   dropMaps: ['specular', 'glossiness'],
 });
-// The island is only ever seen from several metres back across 40 materials;
-// 2K per texture was spending 16 MB to resolve detail nobody can see.
+// The city is a PS1-era low-poly street scene: 68k triangles across 218 meshes,
+// so geometry is not the cost — 25 diffuse atlases are. They are authored at
+// 1024 and the art style is deliberately crunchy, so 512 loses nothing a viewer
+// standing in the street can see, and halves the download.
 await buildMesh(
-  'lets_go_to_the_beach_-_beach_themed_diorama/scene.gltf',
-  'island.glb',
-  'island',
-  { textureSize: 1024 },
+  'popular_streets_of_lima/scene.gltf',
+  'city.glb',
+  'city',
+  { textureSize: 512 },
 );
 
 console.log('\nDone — runtime set written to src/assets/models/\n');

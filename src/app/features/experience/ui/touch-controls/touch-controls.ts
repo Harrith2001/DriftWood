@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, output, signal } from '@angular/cor
 /**
  * On-screen joystick and interact button for touch devices.
  *
- * Without this the entire island is unreachable on a phone — the character has
+ * Without this the entire city is unreachable on a phone — the character has
  * no keyboard to drive it. The stick reports normalised axes continuously and
  * re-centres on release.
  */

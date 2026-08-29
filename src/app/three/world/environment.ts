@@ -1,26 +1,38 @@
 import * as THREE from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { QualitySettings } from '../../core/models/experience.model';
+import { MODEL_OFFSET } from '../../core/world/world.config';
 
 /**
- * The island diorama.
+ * The city.
  *
- * The model is recentred so world origin sits at the middle of the island with
- * its base at y=0, which is what every coordinate in `world.config.ts` assumes.
- * Meshes are also collected into a flat array for the camera rig to raycast
- * against, so the follow camera can pull in rather than clipping through a wall.
+ * The model is seated at the explicit offset in `world.config.ts` rather than
+ * being recentred on its own bounding box. It is a hillside, not a diorama: the
+ * bounds span 63 metres vertically and 284 horizontally, so their centre lands
+ * in mid-air over a valley and has nothing to do with where anyone walks.
+ *
+ * Meshes are collected into flat arrays for the camera rig to raycast against
+ * (so the follow camera pulls in rather than clipping through a facade) and for
+ * the ground probe to stand on.
  */
 /**
  * Materials the character may stand on.
  *
- * The diorama names its surfaces explicitly, which is far more reliable than
- * inferring walkability from height: `M_Water`, `M_SandWater` (submerged sand)
- * and `M_GroundPlaneBottom` (sea bed) all sit close enough to beach level that a
- * height-band test happily accepted them, and the character strolled out across
- * the bay. `M_SandWaterEdge` is the damp strip at the waterline and is kept, so
- * he can walk right down to the water without walking onto it.
+ * Naming the surfaces is far more reliable than inferring walkability from
+ * height. This model stacks roads, terraces and rooftops through 25 metres of
+ * elevation, and several rooftops sit at exactly the height of a road one street
+ * over, so any height-band test would hand back a roof as ground.
+ *
+ * `darkconcrete` is deliberately absent: it is the interior flooring, and it
+ * exists at first- and second-storey levels as well as at street level.
  */
-const WALKABLE_SURFACE = /^M_(SandTop|SandWaterEdge|Pier|Pier_Trim)$/;
+const WALKABLE_SURFACE = /^(atlas_street|ground|concretopoor)$/;
+
+/**
+ * Scenery that must never stop the camera or count as an obstacle: window glass,
+ * the alpha-carded plants, and the emissive strips inside the street lamps.
+ */
+const SEE_THROUGH = /^(glasss|atlas_plantsTRP|emitYELL|emiWHITE)$/;
 
 export class Environment {
   readonly root: THREE.Group;
@@ -31,17 +43,15 @@ export class Environment {
 
   constructor(gltf: GLTF, quality: QualitySettings) {
     this.root = gltf.scene;
-    this.root.name = 'island';
+    this.root.name = 'city';
 
-    const box = new THREE.Box3().setFromObject(this.root);
-    const center = box.getCenter(new THREE.Vector3());
-    this.root.position.set(-center.x, -box.min.y, -center.z);
+    this.root.position.copy(MODEL_OFFSET);
 
-    // Flush the recentring into every child's world matrix straight away.
+    // Flush the placement into every child's world matrix straight away.
     //
     // Three's Raycaster does not update world matrices — it reads whatever was
     // last computed, and matrices are normally only refreshed during a render.
-    // Moving the island above therefore leaves every mesh's matrixWorld
+    // Moving the model above therefore leaves every mesh's matrixWorld
     // describing where it used to be, and anything that raycasts before the
     // first frame is measuring the old position. That included the probe that
     // decides the height the arrival touches down at, whose result is then
@@ -56,14 +66,12 @@ export class Environment {
       mesh.castShadow = quality.shadows;
       mesh.receiveShadow = quality.shadows;
 
-      // Everything solid enough to hide the character counts as a collider,
-      // foliage included. An earlier version excluded palm fronds on the theory
-      // that alpha-tested cards would make the camera flinch — but the result
-      // was the camera parking *inside* a palm crown with the character
-      // completely hidden, which is far worse than an occasional nudge.
-      this.colliders.push(mesh);
+      if (matches(mesh, WALKABLE_SURFACE)) this.walkableSurfaces.push(mesh);
 
-      if (isWalkableSurface(mesh)) this.walkableSurfaces.push(mesh);
+      // Everything solid enough to hide the character counts as a collider, so
+      // the camera never parks inside a wall. Glass and foliage cards are the
+      // exception: flinching away from a shopfront window looks like a fault.
+      if (!matches(mesh, SEE_THROUGH)) this.colliders.push(mesh);
     });
   }
 
@@ -74,8 +82,8 @@ export class Environment {
   }
 }
 
-/** True when any of the mesh's materials names a standable surface. */
-function isWalkableSurface(mesh: THREE.Mesh): boolean {
+/** True when any of the mesh's materials matches the pattern. */
+function matches(mesh: THREE.Mesh, pattern: RegExp): boolean {
   const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-  return materials.some((m) => WALKABLE_SURFACE.test(m?.name ?? ''));
+  return materials.some((m) => pattern.test(m?.name ?? ''));
 }

@@ -59,6 +59,20 @@
             }
           </ul>
         }
+
+        @if (content.credits?.length) {
+          <p class="credits">
+            @for (credit of content.credits; track credit.href) {
+              <a
+                class="credits__link"
+                [href]="credit.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ credit.label }}</a
+              >
+            }
+          </p>
+        }
       </div>
 
       <button type="button" class="panel__close" (click)="close.emit()" aria-label="Close">

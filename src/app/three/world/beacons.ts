@@ -8,7 +8,7 @@ import type { PanelId } from '../../core/models/experience.model';
  *
  * These exist for wayfinding. Dropping a visitor into an open world with no
  * indication of where to go is the fastest way to have them leave, so each
- * point of interest advertises itself from across the island, brightens as you
+ * point of interest advertises itself from across the plaza, brightens as you
  * approach, and dims once you have read it.
  */
 export class Beacons {
@@ -23,7 +23,7 @@ export class Beacons {
 
   /**
    * Below FADE_NEAR the shaft is gone entirely; above FADE_FAR it is at full
-   * strength. Tuned against the island, which is only about nineteen units
+   * strength. Tuned against the playable streets, which run about forty units
    * across: push these out much further and the shafts never really appear, so
    * they stop doing the one job they exist for.
    */
@@ -51,8 +51,10 @@ export class Beacons {
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
       ring.rotation.x = -Math.PI / 2;
-      // Just clear of the ground to avoid z-fighting with the sand.
-      ring.position.set(spot.x, GROUND_Y + 0.03, spot.z);
+      // Just clear of the road to avoid z-fighting with it. The height comes
+      // from the hotspot rather than a world constant: these streets are a
+      // hillside, and the four locations sit three metres apart vertically.
+      ring.position.set(spot.x, spot.y + 0.03, spot.z);
 
       const columnMat = new THREE.MeshBasicMaterial({
         color,
@@ -63,7 +65,7 @@ export class Beacons {
         blending: THREE.AdditiveBlending,
       });
       const column = new THREE.Mesh(columnGeo, columnMat);
-      column.position.set(spot.x, GROUND_Y + 2.5, spot.z);
+      column.position.set(spot.x, spot.y + 2.5, spot.z);
 
       this.materials.push(ringMat, columnMat);
       this.group.add(ring, column);
@@ -102,7 +104,7 @@ export class Beacons {
 
       // The shaft exists to say "something is over there". Up close that job is
       // done by the ground ring and the on-screen prompt, while the shaft itself
-      // becomes a full-height slab washing over the palms behind it — so it
+      // becomes a full-height slab washing over the facades behind it — so it
       // fades right out as you approach.
       let proximity = 1;
       if (cameraPos) {

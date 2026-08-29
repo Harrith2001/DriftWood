@@ -3,7 +3,7 @@ import { TouchControls } from './touch-controls';
 
 /**
  * The joystick is the only way to move on a phone, so its axis maths is worth
- * pinning down: a sign error here makes the whole island unreachable on touch,
+ * pinning down: a sign error here makes the whole city unreachable on touch,
  * and it cannot be caught on a desktop browser, which never reports a coarse
  * pointer and so never renders this component at all.
  */

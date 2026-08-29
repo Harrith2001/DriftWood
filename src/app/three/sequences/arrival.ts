@@ -6,7 +6,7 @@ import {
   GROUND_Y,
   LANDING,
   SKY_Y,
-  YAW_INLAND,
+  YAW_STREET,
   YAW_PORTRAIT,
 } from '../../core/world/world.config';
 import type { Character } from '../character/character';
@@ -39,15 +39,15 @@ const AXIS_Y = new THREE.Vector3(0, 1, 0);
  * Orientation keyframes.
  *
  * `Q_DIVE` composes the inland yaw with a pitch so the pitch happens in the
- * body's own frame — belly to earth while still facing the island. A bare
+ * body's own frame — belly to earth while still facing the street. A bare
  * world-X rotation would silently discard the yaw and the dive would read as a
  * lopsided diagonal tumble.
  */
 const Q_PORTRAIT = new THREE.Quaternion().setFromAxisAngle(AXIS_Y, YAW_PORTRAIT);
 const Q_DIVE = new THREE.Quaternion()
-  .setFromAxisAngle(AXIS_Y, YAW_INLAND)
+  .setFromAxisAngle(AXIS_Y, YAW_STREET)
   .multiply(new THREE.Quaternion().setFromAxisAngle(AXIS_X, Math.PI * 0.46));
-const Q_LAND = new THREE.Quaternion().setFromAxisAngle(AXIS_Y, YAW_INLAND);
+const Q_LAND = new THREE.Quaternion().setFromAxisAngle(AXIS_Y, YAW_STREET);
 
 /** Height at which the descent slows and the body rotates upright to land. */
 const FLARE_Y = 11;
@@ -88,7 +88,7 @@ export class ArrivalSequence {
     private readonly impact: ImpactBurst,
     /**
      * Height of the deck he actually lands on. Probed from geometry, because
-     * the nominal ground constant sits ~0.4 above the pier and touching down on
+     * the nominal ground constant can sit above the real roadway, and touching down on
      * it left him hovering, then popping down when control was handed over.
      */
     private readonly landingY: number = GROUND_Y,

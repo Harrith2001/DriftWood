@@ -33,7 +33,7 @@ export class ImpactBurst {
 
     // ── Shockwave ring, lying flat on the ground ──
     // Thin annulus: a wide one scales up into a filled disc that swamps the
-    // whole pier rather than reading as a pressure wave travelling outward.
+    // whole plaza rather than reading as a pressure wave travelling outward.
     this.ringGeometry = new THREE.RingGeometry(0.86, 1.0, 64);
     this.ringMaterial = new THREE.MeshBasicMaterial({
       color: 0xffe6c4,

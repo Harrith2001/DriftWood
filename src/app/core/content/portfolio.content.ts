@@ -24,6 +24,11 @@ export interface PanelContent {
   readonly body: readonly string[];
   readonly items?: readonly PanelItem[];
   readonly links?: readonly PanelLink[];
+  /**
+   * Small print at the foot of the panel. Used for the environment credit, which
+   * is a licence condition rather than a courtesy — see `CREDITS` below.
+   */
+  readonly credits?: readonly PanelLink[];
 }
 
 export interface PanelItem {
@@ -38,11 +43,27 @@ export interface PanelLink {
   readonly href: string;
 }
 
+/**
+ * Environment attribution.
+ *
+ * The city model is CC BY 4.0, which permits commercial use but *requires* the
+ * author to be credited wherever the work is shared. That makes this a licence
+ * obligation, not a nicety: it has to stay visible in the shipped site, not just
+ * in the repository. It is surfaced as small print at the foot of the About
+ * panel.
+ */
+export const CREDITS: readonly PanelLink[] = [
+  {
+    label: 'Environment: “Popular Streets of Lima | PS1 Environment” by McPato, CC BY 4.0',
+    href: 'https://sketchfab.com/3d-models/popular-streets-of-lima-ps1-environment-d914a9adf2e24635a5310c909800009d',
+  },
+];
+
 export const PANELS: Readonly<Record<PanelId, PanelContent>> = {
   about: {
     id: 'about',
     title: 'About',
-    kicker: 'The beach house',
+    kicker: 'The blue house on the corner',
     body: [
       `I'm ${IDENTITY.name}, a creative developer who treats the browser as a
        real-time medium rather than a page. Most of my work sits where
@@ -69,12 +90,13 @@ export const PANELS: Readonly<Record<PanelId, PanelContent>> = {
           'GSAP timelines, scroll choreography, and the kind of easing you feel rather than notice.',
       },
     ],
+    credits: CREDITS,
   },
 
   projects: {
     id: 'projects',
     title: 'Projects',
-    kicker: 'The pier',
+    kicker: 'The middle of the plaza',
     body: [
       `A few things I have built. Each one started as a question about what a
        browser could be talked into doing.`,
@@ -84,7 +106,7 @@ export const PANELS: Readonly<Record<PanelId, PanelContent>> = {
         title: 'Ocean Portfolio',
         meta: 'Angular 20 · Three.js · GSAP',
         description:
-          'This island. A cinematic freefall drops you onto a pier — slow-motion flare, hard landing, dust — then hands you the controls for free third-person exploration with proximity-triggered content. Runtime payload cut from 342 MB to 19 MB by stripping duplicate meshes out of the animation exports.',
+          'This street. A cinematic freefall drops you into a plaza — slow-motion flare, hard landing, dust — then hands you the controls for free third-person exploration with proximity-triggered content. Where you can walk is read off the mesh itself: the environment is rasterised offline into a walkability map, so kerbs, terraces and shopfronts stop you because they are there, not because someone drew a box around them.',
         tags: ['WebGL', 'Skeletal animation', 'Asset pipeline'],
       },
       {
@@ -107,7 +129,7 @@ export const PANELS: Readonly<Record<PanelId, PanelContent>> = {
   skills: {
     id: 'skills',
     title: 'Skills',
-    kicker: 'The changing cabin',
+    kicker: 'Outside the shopfronts',
     body: [`Tools I reach for, roughly in order of how often I reach for them.`],
     items: [
       {
@@ -137,7 +159,7 @@ export const PANELS: Readonly<Record<PanelId, PanelContent>> = {
   contact: {
     id: 'contact',
     title: 'Contact',
-    kicker: 'The quiet end of the beach',
+    kicker: 'The bottom of the hill',
     body: [
       `If you have something that should exist and does not yet, I would like to
        hear about it. Freelance, collaboration, or just to compare notes on

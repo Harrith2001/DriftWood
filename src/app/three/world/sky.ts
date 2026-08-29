@@ -1,17 +1,23 @@
 import * as THREE from 'three';
 
 /**
- * Sunset sky dome and distance fog.
+ * Dusk sky dome and the coastal haze that hangs over Lima at that hour.
  *
  * Driven by view direction rather than raw world position. An earlier revision
  * offset the position by a scalar before normalising, which meant a level view
- * sampled the gradient at h≈0.18 — a 40% blend of horizon orange and zenith
- * blue, i.e. a muddy grey by construction, which tone mapping then lifted to
- * near-white. Sampling direction directly makes the horizon band land where the
- * horizon actually is.
+ * sampled the gradient at h≈0.18 — a 40% blend of horizon and zenith, i.e. a
+ * muddy grey by construction, which tone mapping then lifted to near-white.
+ * Sampling direction directly makes the horizon band land where the horizon
+ * actually is.
  *
- * Four zones, bottom to top: water, a hot band right at the horizon, the
- * horizon colour proper, then the zenith.
+ * Dusk, not night. The model's textures are baked with daylight in them, so a
+ * true night sky leaves every facade reading as flat grey mud; blue hour keeps
+ * them legible while still being dark enough for the sodium street lamps — the
+ * model's own `emitYELL` and `emiWHITE` materials — to carry the bloom pass.
+ *
+ * Four zones, bottom to top: the haze the streets sit in, a warm band at the
+ * horizon where the sun has just gone, the horizon colour proper, then the
+ * zenith.
  */
 export function createSky(): { mesh: THREE.Mesh; fog: THREE.FogExp2 } {
   const material = new THREE.ShaderMaterial({
@@ -20,10 +26,10 @@ export function createSky(): { mesh: THREE.Mesh; fog: THREE.FogExp2 } {
     // The dome is unlit and must not be dimmed by the scene fog.
     fog: false,
     uniforms: {
-      uZenith: { value: new THREE.Color(0x123a6b) },
-      uHorizon: { value: new THREE.Color(0xff7a2f) },
-      uGlow: { value: new THREE.Color(0xffd08a) },
-      uWater: { value: new THREE.Color(0x16344a) },
+      uZenith: { value: new THREE.Color(0x141c33) },
+      uHorizon: { value: new THREE.Color(0x8a5a58) },
+      uGlow: { value: new THREE.Color(0xd98f5e) },
+      uHaze: { value: new THREE.Color(0x3a3542) },
     },
     vertexShader: /* glsl */ `
       varying vec3 vWorldPosition;
@@ -36,23 +42,23 @@ export function createSky(): { mesh: THREE.Mesh; fog: THREE.FogExp2 } {
       uniform vec3 uZenith;
       uniform vec3 uHorizon;
       uniform vec3 uGlow;
-      uniform vec3 uWater;
+      uniform vec3 uHaze;
       varying vec3 vWorldPosition;
 
       void main() {
         // Height of this pixel's direction, -1 (straight down) to 1 (straight up).
         float h = normalize(vWorldPosition).y;
 
-        // Orange holds well above the horizon before giving way to blue.
-        float up = smoothstep(-0.02, 0.62, h);
-        vec3 col = mix(uHorizon, uZenith, pow(up, 0.85));
+        // The warm band gives way to night quickly — the sun is already down.
+        float up = smoothstep(-0.04, 0.48, h);
+        vec3 col = mix(uHorizon, uZenith, pow(up, 0.7));
 
-        // Hot band hugging the horizon line, falling off fast.
-        float glow = pow(1.0 - clamp(abs(h) / 0.3, 0.0, 1.0), 2.0);
-        col = mix(col, uGlow, glow * 0.5);
+        // Last of the light, hugging the horizon line.
+        float glow = pow(1.0 - clamp(abs(h) / 0.22, 0.0, 1.0), 2.0);
+        col = mix(col, uGlow, glow * 0.45);
 
-        // Below the horizon, roll into deep water.
-        col = mix(uWater, col, smoothstep(-0.22, -0.01, h));
+        // Below the horizon, roll into the haze the far streets disappear into.
+        col = mix(uHaze, col, smoothstep(-0.18, -0.01, h));
 
         gl_FragColor = vec4(col, 1.0);
       }
@@ -65,5 +71,8 @@ export function createSky(): { mesh: THREE.Mesh; fog: THREE.FogExp2 } {
   // pitches steeply during the dive.
   mesh.frustumCulled = false;
 
-  return { mesh, fog: new THREE.FogExp2(0xe0a878, 0.0075) };
+  // Lima's garúa. Tuned so the street the visitor is standing in stays clear
+  // while the far end of the model — 200 metres off, and never dressed to be
+  // looked at closely — dissolves before its edge can be seen.
+  return { mesh, fog: new THREE.FogExp2(0x3a3542, 0.011) };
 }

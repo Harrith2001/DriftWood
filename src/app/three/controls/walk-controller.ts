@@ -23,11 +23,12 @@ export interface MoveIntent {
 }
 
 /**
- * Third-person ground movement, constrained to the sand and pier.
+ * Third-person ground movement, constrained to the streets.
  *
  * Axes are resolved independently so that walking into a wall diagonally slides
- * along it instead of stopping dead, which is what makes tight spots (the gap
- * between the cabin and the water) feel navigable rather than sticky.
+ * along it instead of stopping dead, which is what makes the narrow spots — the
+ * alley mouths, the gap between a stall and a facade — feel navigable rather
+ * than sticky.
  */
 export class WalkController {
   private x: number;
@@ -64,14 +65,24 @@ export class WalkController {
   get facing(): number {
     return this.yaw;
   }
+  /** Surface the character is standing on. The camera rig anchors to this. */
+  get surfaceY(): number {
+    return this.groundHeight;
+  }
 
-  /** Teleports the controller, e.g. after the arrival hands over control. */
-  reset(x: number, z: number, yaw: number): void {
+  /**
+   * Teleports the controller, e.g. after the arrival hands over control.
+   *
+   * `nearY` is the height to look for ground around. It matters on the hill:
+   * teleporting to a hotspot down the descending street and searching around
+   * the plaza's height would find no road there at all.
+   */
+  reset(x: number, z: number, yaw: number, nearY: number = GROUND_Y): void {
     this.x = x;
     this.z = z;
     this.yaw = yaw;
     this.gait = 0;
-    this.groundHeight = this.ground?.heightAt(x, z) ?? GROUND_Y;
+    this.groundHeight = this.ground?.heightAt(x, z, nearY) ?? GROUND_Y;
     this.character.setGroundPosition(x, z, this.groundHeight);
     this.character.setYaw(yaw);
   }
@@ -90,17 +101,18 @@ export class WalkController {
 
       // Independent axis resolution → wall sliding.
       const nextX = this.x + sin * distance;
-      if (this.isWalkable(nextX, this.z)) this.x = nextX;
+      if (this.isWalkable(nextX, this.z, this.groundHeight)) this.x = nextX;
 
       const nextZ = this.z + cos * distance;
-      if (this.isWalkable(this.x, nextZ)) this.z = nextZ;
+      if (this.isWalkable(this.x, nextZ, this.groundHeight)) this.z = nextZ;
     }
 
-    // Follow the real surface rather than a constant. The beach slopes and the
-    // pier deck sits lower than the sand, so a fixed height left the character
-    // hovering in some places and sunk in others. Eased, so stepping from sand
-    // onto decking is a settle rather than a snap.
-    const surface = this.ground?.heightAt(this.x, this.z) ?? GROUND_Y;
+    // Follow the real surface rather than a constant. The streets here climb and
+    // fall by 25 metres across the playable area, and kerbs put pavement and
+    // roadway at different heights within a stride of each other, so a fixed
+    // height would leave the character hovering in some places and sunk in
+    // others. Eased, so stepping down a kerb is a settle rather than a snap.
+    const surface = this.ground?.heightAt(this.x, this.z, this.groundHeight) ?? GROUND_Y;
     this.groundHeight = THREE.MathUtils.lerp(this.groundHeight, surface, Math.min(1, delta * 12));
 
     this.character.setGroundPosition(this.x, this.z, this.groundHeight);
@@ -120,19 +132,21 @@ export class WalkController {
   }
 
   /**
-   * A position is valid when the body fits entirely inside the walkable union
-   * and clear of every blocker.
+   * A position is valid when the body fits inside the play bounds and there is
+   * real ground under it.
    *
-   * The body radius is checked with probe points rather than by shrinking each
-   * rectangle. Insetting the rectangles individually put a dead zone along every
-   * internal seam: the pier ends at x=0.3 and the sand begins at x=0.3, so
-   * insetting both left a 0.9-unit band that belonged to neither and the
-   * character could never step off the pier onto the island at all. Probing the
-   * union instead means a seam is invisible — the probe simply lands in the
-   * neighbouring rectangle — while a genuine outer edge still blocks, because
-   * there the probe falls into open water.
+   * The body radius is checked with probe points rather than by shrinking the
+   * rectangle, which is what lets several rectangles meet without a seam: an
+   * inset applied to each individually leaves a band belonging to neither, and
+   * on the beach that band ran the full length of the pier and stopped the
+   * character stepping off it entirely.
+   *
+   * The rectangle is only a fence around the dressed part of the model. What
+   * actually stops the character walking into a wall, off a terrace, or up onto
+   * a roof is the geometry probe below — no rectangle could describe 218 meshes
+   * of hillside, and the attempt is what produced most of the beach's bugs.
    */
-  isWalkable(x: number, z: number): boolean {
+  isWalkable(x: number, z: number, nearY: number = GROUND_Y): boolean {
     if (!isInsideWalkable(x, z)) return false;
 
     const r = BODY_RADIUS;
@@ -145,23 +159,21 @@ export class WalkController {
       return false;
     }
 
-    // Blockers are inflated instead, so the body keeps its distance from walls.
+    // Buildings raised off the roadway, parked cars, stalls, banks too steep to
+    // climb. Inflated by the body radius so he stops short of them rather than
+    // clipping a shoulder through. These are generated from the mesh, not drawn
+    // over a screenshot — see `city-blockers.ts`.
     const blocked = BLOCKERS.some(
       (b) => x >= b.minX - r && x <= b.maxX + r && z >= b.minZ - r && z <= b.maxZ + r,
     );
     if (blocked) return false;
 
-    // Final authority: is there real ground here? The rectangles above are only
-    // an approximation of an irregular island, and the sand one overhangs the
-    // western shoreline — without this check the character walks out onto open
-    // sea with the island receding behind him.
-    // Centre point only. Probing the whole footprint as well sounds safer but
-    // is far too strict on narrow geometry: the pier decking is barely wider
-    // than the body, so requiring ground under every offset blocked movement in
-    // all directions and pinned the character to the spot he landed on.
-    // Standing with a heel slightly over an edge is normal; walking on water is
-    // not, and the centre test is what prevents that.
-    return this.ground ? this.ground.hasGround(x, z) : true;
+    // Final authority: is there real road here? Centre point only — probing the
+    // whole footprint as well sounds safer but is far too strict on narrow
+    // geometry, and on the beach that mistake pinned the character to the spot
+    // he landed on. Standing with a heel over a kerb is normal; stepping off a
+    // terrace into thin air is not, and the centre test is what prevents that.
+    return this.ground ? this.ground.hasGround(x, z, nearY) : true;
   }
 
   /** Nearest hotspot within its radius, or null. */

@@ -3,12 +3,13 @@ import { CameraRig } from './camera-rig';
 import { CAM_FOLLOW_DISTANCE, GROUND_Y } from '../../core/world/world.config';
 
 /**
- * Regression cover for the flicker seen when walking past palms.
+ * Regression cover for the flicker seen when walking past gappy geometry.
  *
- * Palm fronds are thin and full of gaps, so the occlusion ray flips between hit
- * and miss several times a second as the character passes a trunk. The rig used
- * to snap inward on every one of those frames and drift back out between them,
- * which read on screen as the camera flashing.
+ * Railings, cabling and foliage cards are thin and full of gaps, so the
+ * occlusion ray flips between hit and miss several times a second as the
+ * character passes them. The rig used to snap inward on every one of those
+ * frames and drift back out between them, which read on screen as the camera
+ * flashing.
  */
 describe('CameraRig occlusion stability', () => {
   const FRAME = 1 / 60;
@@ -95,6 +96,24 @@ describe('CameraRig occlusion stability', () => {
 
     expect(cleared).toBeGreaterThan(occluded);
     expect(cleared).toBeCloseTo(CAM_FOLLOW_DISTANCE, 0);
+  });
+
+  /**
+   * The streets fall away several metres from the plaza the ground constant
+   * describes. Anchoring the rig to that constant left the camera floating above
+   * the character and aiming over his head as soon as he walked downhill.
+   */
+  it('follows the character down a slope instead of staying at the nominal ground', () => {
+    const rig = makeRig();
+    const below = GROUND_Y - 4;
+
+    for (let i = 0; i < 200; i++) {
+      rig.followCharacter(0, 0, YAW, FRAME, 58, below);
+      rig.update(FRAME, 1000);
+    }
+
+    expect(rig.camera.position.y).toBeLessThan(GROUND_Y);
+    expect(rig.camera.position.y).toBeCloseTo(below + 2.7, 0);
   });
 
   it('keeps a depth range precise enough not to z-fight foliage', () => {
