@@ -55,10 +55,10 @@ Nothing in that file affects the 3D scene or the layout.
 
 ### Controls
 
-`W`/`A`/`S`/`D` or the arrow keys to move, `Shift` to run, `E` to open a
-location. On touch devices an on-screen stick appears instead. Every location is
-also reachable from the HUD list, so the 3D experience is never a gate on the
-information.
+`W`/`A`/`S`/`D` or the arrow keys to move, `Shift` to run, `Space` to jump, `E`
+to open a location. On touch devices an on-screen stick and two buttons appear
+instead. Every location is also reachable from the HUD list, so the 3D
+experience is never a gate on the information.
 
 ### Quality tiers
 
@@ -141,6 +141,17 @@ A few things in here are load-bearing and easy to break:
   character around with the `driftwood` dev hook (development builds only, see
   `three/ocean-world.ts`), then feed the trace back. Reading either side alone is
   how he ended up standing in a shop.
+- **Two kinds of obstacle, and they are not interchangeable.** The baked
+  blockers answer "which *ground* has no route to it" — interiors, rooftops,
+  banks too steep to climb — on a half-metre grid merged into axis-aligned
+  rectangles. `controls/body-collider.ts` answers "is something standing in the
+  way", by sweeping two rays against the real meshes. Railings, balustrades,
+  lamp posts and parked cars sit on ground that is perfectly walkable either
+  side of them, at a scale and angle no rectangle grid describes, so the map
+  alone lets the character walk straight through them. Both rays run between the
+  two ends' own ground heights rather than horizontally — a horizontal ray at
+  step height buries itself in the stair flight ahead and the character refuses
+  to climb his own staircase.
 - **Why the blockers are baked and not probed.** Most buildings here are modelled
   from below the roadway up through it, so a raycast through the space the body
   would occupy sits strictly inside the solid with no face along it to hit. There
@@ -151,6 +162,17 @@ A few things in here are load-bearing and easy to break:
   used. Fading needs per-object granularity that downloaded environments rarely
   have — see the note in `three/camera/camera-rig.ts` for what that cost last
   time.
+- **Speed is carried, not switched** (`controls/walk-controller.ts`). Setting it
+  straight from the key state reached full pace in one frame and stopped dead in
+  another, with the walk cycle snapping between rates underneath. Playback is
+  also tied to actual ground speed against `STRIDE_SPEED`, which is what stops
+  the feet skating — no playback rate makes a walk animation honestly cover the
+  4.2 m/s the character used to move at, so `WALK_SPEED` came down to a walk and
+  the run multiplier does the ground-covering.
+- **Templates are only checked by the Angular compiler.** `tsc --noEmit` will
+  happily pass a template calling a method that does not exist; `npm run build`
+  is what catches it. Run the build, not just the type-check, after touching a
+  component template.
 - **The camera on a hill.** Its seat height is measured from the character's
   footing, which is right on the level and wrong on a slope: walking downhill
   leaves the rig six metres back up ground that has risen in the meantime, so it

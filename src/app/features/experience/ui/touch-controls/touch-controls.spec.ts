@@ -128,7 +128,28 @@ describe('TouchControls', () => {
   it('emits an interact request from the action button', () => {
     let fired = 0;
     component.interact.subscribe(() => fired++);
-    fixture.nativeElement.querySelector('button.action').click();
+    // Addressed by label rather than by position: there are two action buttons
+    // now, and the first one in the DOM is jump.
+    fixture.nativeElement.querySelector('button[aria-label="Open location"]').click();
     expect(fired).toBe(1);
+  });
+
+  it('emits a jump request from the jump button', () => {
+    let fired = 0;
+    component.jump.subscribe(() => fired++);
+    fixture.nativeElement.querySelector('button[aria-label="Jump"]').click();
+    expect(fired).toBe(1);
+  });
+
+  it('keeps the two action buttons distinct', () => {
+    // Without a touch jump there is no way to jump on a phone at all, and it is
+    // easy to wire both buttons to the same output and never notice.
+    let interacts = 0;
+    let jumps = 0;
+    component.interact.subscribe(() => interacts++);
+    component.jump.subscribe(() => jumps++);
+    fixture.nativeElement.querySelector('button[aria-label="Jump"]').click();
+    expect(jumps).toBe(1);
+    expect(interacts).toBe(0);
   });
 });

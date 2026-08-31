@@ -27,6 +27,7 @@ import { ArrivalSequence } from './sequences/arrival';
 import { ImpactBurst } from './effects/impact-burst';
 import { WalkController } from './controls/walk-controller';
 import { InputSource } from './controls/input-source';
+import { BodyCollider } from './controls/body-collider';
 import { disposeObject } from './util/dispose';
 
 /**
@@ -70,6 +71,7 @@ export class OceanWorld {
   private arrival!: ArrivalSequence;
   private lighting!: Lighting;
   private groundSampler = new GroundSampler();
+  private readonly bodyCollider = new BodyCollider();
   private walk!: WalkController;
   private input!: InputSource;
 
@@ -132,6 +134,9 @@ export class OceanWorld {
     this.environment = new Environment(assets.city, this.quality);
     this.scene.add(this.environment.root);
     this.rig.setColliders(this.environment.colliders);
+    // Same set the camera uses: anything solid enough to hide the character is
+    // solid enough to walk into.
+    this.bodyCollider.setColliders(this.environment.colliders);
     // Roads, yards and pavements only — never a rooftop or an interior floor.
     this.groundSampler.setTargets(this.environment.walkableSurfaces);
 
@@ -158,6 +163,7 @@ export class OceanWorld {
       LANDING.z,
       YAW_STREET,
       this.groundSampler,
+      this.bodyCollider,
     );
     this.input = new InputSource();
     this.input.setEnabled(false); // no walking until touchdown
@@ -274,7 +280,7 @@ export class OceanWorld {
 
     const intent = this.movementEnabled
       ? this.input.readIntent()
-      : { forward: 0, turn: 0, run: false };
+      : { forward: 0, turn: 0, run: false, jump: false };
 
     this.walk.update(delta, intent);
 
@@ -317,6 +323,10 @@ export class OceanWorld {
 
   requestInteract(): void {
     this.input?.queueInteract();
+  }
+
+  requestJump(): void {
+    this.input?.queueJump();
   }
 
   /**

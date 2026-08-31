@@ -1,6 +1,7 @@
 import { WalkController } from './walk-controller';
 import type { Character } from '../character/character';
 import type { GroundSampler } from '../world/ground-sampler';
+import type { BodyCollider } from './body-collider';
 import {
   BLOCKERS,
   BODY_RADIUS,
@@ -23,6 +24,7 @@ describe('WalkController', () => {
       setYaw: () => {},
       transitionTo: () => {},
       setWalkSpeed: () => {},
+      setCrouch: () => {},
     } as unknown as Character;
   }
 
@@ -77,7 +79,7 @@ describe('WalkController', () => {
 
   it('does not move when there is no input', () => {
     const walk = controller();
-    walk.update(1 / 60, { forward: 0, turn: 0, run: false });
+    walk.update(1 / 60, { forward: 0, turn: 0, run: false, jump: false });
     expect(walk.positionX).toBeCloseTo(LANDING.x, 5);
     expect(walk.positionZ).toBeCloseTo(LANDING.z, 5);
   });
@@ -86,14 +88,14 @@ describe('WalkController', () => {
     const walk = controller();
     const startZ = walk.positionZ;
     // YAW_STREET faces +Z, up the hill, so forward increases Z.
-    for (let i = 0; i < 30; i++) walk.update(1 / 60, { forward: 1, turn: 0, run: false });
+    for (let i = 0; i < 30; i++) walk.update(1 / 60, { forward: 1, turn: 0, run: false, jump: false });
     expect(walk.positionZ).toBeGreaterThan(startZ);
   });
 
   it('refuses to leave the walkable area however long you push', () => {
     const walk = controller();
     // Two hundred frames of running straight at the boundary.
-    for (let i = 0; i < 200; i++) walk.update(1 / 60, { forward: -1, turn: 0, run: true });
+    for (let i = 0; i < 200; i++) walk.update(1 / 60, { forward: -1, turn: 0, run: true, jump: false });
     expect(walk.isWalkable(walk.positionX, walk.positionZ)).toBe(true);
     expect(walk.positionZ).toBeGreaterThanOrEqual(bounds.minZ);
   });
@@ -101,7 +103,7 @@ describe('WalkController', () => {
   it('stops at a wall instead of walking through it', () => {
     // A wall across the street ahead, reported by geometry alone.
     const walk = controller(groundStub((_x, z) => z > 6));
-    for (let i = 0; i < 200; i++) walk.update(1 / 60, { forward: 1, turn: 0, run: true });
+    for (let i = 0; i < 200; i++) walk.update(1 / 60, { forward: 1, turn: 0, run: true, jump: false });
     expect(walk.positionZ).toBeLessThanOrEqual(6);
   });
 
@@ -124,12 +126,177 @@ describe('WalkController', () => {
     } as unknown as GroundSampler;
 
     const walk = new WalkController(character, LANDING.x, LANDING.z, YAW_STREET, slope);
-    for (let i = 0; i < 120; i++) walk.update(1 / 60, { forward: 1, turn: 0, run: false });
+    for (let i = 0; i < 120; i++) walk.update(1 / 60, { forward: 1, turn: 0, run: false, jump: false });
 
     const expected = (walk.positionZ - LANDING.z) * 1.2;
     expect(Math.abs(walk.surfaceY - expected))
       .withContext('character height against the real stair surface')
       .toBeLessThan(0.3);
+  });
+
+  /**
+   * The baked blockers describe unreachable *ground*, on a half-metre grid
+   * merged into axis-aligned rectangles. Railings, balustrades, lamp posts and
+   * parked cars stand on ground that is walkable either side of them, so nothing
+   * in that map stops the character walking straight through — only a sweep
+   * against the real geometry does.
+   */
+  describe('obstacle sweep', () => {
+    /** A collider that reports a wall across a band of Z. */
+    function colliderStub(hits: (toZ: number) => boolean): BodyCollider {
+      return {
+        setColliders: () => {},
+        blocked: (_fx: number, _fy: number, _fz: number, _tx: number, _ty: number, tz: number) =>
+          hits(tz),
+      } as unknown as BodyCollider;
+    }
+
+    it('stops at a railing standing on perfectly walkable ground', () => {
+      const walk = new WalkController(
+        characterStub(), LANDING.x, LANDING.z, YAW_STREET,
+        groundStub(), // ground everywhere: the map alone would let him through
+        colliderStub((toZ) => toZ > LANDING.z + 3),
+      );
+      for (let i = 0; i < 300; i++) {
+        walk.update(1 / 60, { forward: 1, turn: 0, run: true, jump: false });
+      }
+      expect(walk.positionZ).toBeLessThanOrEqual(LANDING.z + 3);
+    });
+
+    it('walks freely when nothing is in the way', () => {
+      const walk = new WalkController(
+        characterStub(), LANDING.x, LANDING.z, YAW_STREET,
+        groundStub(),
+        colliderStub(() => false),
+      );
+      for (let i = 0; i < 120; i++) {
+        walk.update(1 / 60, { forward: 1, turn: 0, run: false, jump: false });
+      }
+      expect(walk.positionZ).toBeGreaterThan(LANDING.z + 3);
+    });
+  });
+
+  describe('jumping', () => {
+    /** Records the feet height the controller pushes into the character. */
+    function trackingCharacter(): { character: Character; heights: number[] } {
+      const heights: number[] = [];
+      const character = {
+        setGroundPosition: (_x: number, _z: number, y: number) => heights.push(y),
+        setYaw: () => {},
+        transitionTo: () => {},
+        setWalkSpeed: () => {},
+        setCrouch: () => {},
+      } as unknown as Character;
+      return { character, heights };
+    }
+
+    it('leaves the ground and comes back to it', () => {
+      const { character, heights } = trackingCharacter();
+      const walk = new WalkController(character, LANDING.x, LANDING.z, YAW_STREET, groundStub());
+
+      walk.update(1 / 60, { forward: 0, turn: 0, run: false, jump: true });
+      expect(walk.isAirborne).withContext('airborne on the frame after take-off').toBe(true);
+
+      for (let i = 0; i < 120; i++) {
+        walk.update(1 / 60, { forward: 0, turn: 0, run: false, jump: false });
+      }
+
+      expect(walk.isAirborne).withContext('back on the ground within two seconds').toBe(false);
+      expect(Math.max(...heights)).withContext('peak height').toBeGreaterThan(0.3);
+      expect(heights.at(-1)).withContext('settled back on the ground').toBeCloseTo(0, 2);
+    });
+
+    it('ignores a second jump while still in the air', () => {
+      const { character, heights } = trackingCharacter();
+      const walk = new WalkController(character, LANDING.x, LANDING.z, YAW_STREET, groundStub());
+
+      // Hold jump for the whole flight: without the airborne guard this climbs
+      // forever, which is the classic infinite-jump bug.
+      for (let i = 0; i < 60; i++) {
+        walk.update(1 / 60, { forward: 0, turn: 0, run: false, jump: true });
+      }
+      expect(Math.max(...heights)).toBeLessThan(1.2);
+    });
+
+    it('does not jump when the request never comes', () => {
+      const { character, heights } = trackingCharacter();
+      const walk = new WalkController(character, LANDING.x, LANDING.z, YAW_STREET, groundStub());
+      for (let i = 0; i < 60; i++) {
+        walk.update(1 / 60, { forward: 0, turn: 0, run: false, jump: false });
+      }
+      expect(Math.max(...heights)).toBeCloseTo(0, 3);
+      expect(walk.isAirborne).toBe(false);
+    });
+  });
+
+  describe('the walk itself', () => {
+    /** Captures the playback rate pushed into the walk clip. */
+    function rateTracking(): { character: Character; rates: number[] } {
+      const rates: number[] = [];
+      const character = {
+        setGroundPosition: () => {},
+        setYaw: () => {},
+        transitionTo: () => {},
+        setWalkSpeed: (r: number) => rates.push(r),
+        setCrouch: () => {},
+      } as unknown as Character;
+      return { character, rates };
+    }
+
+    it('builds up to speed instead of starting at a sprint', () => {
+      const walk = controller(groundStub());
+      const after: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        walk.update(1 / 60, { forward: 1, turn: 0, run: false, jump: false });
+        after.push(walk.positionZ - LANDING.z);
+      }
+      // Each step is larger than the one before while the ramp is running.
+      const steps = after.map((d, i) => d - (after[i - 1] ?? 0));
+      for (let i = 1; i < steps.length; i++) {
+        expect(steps[i]).withContext(`step ${i} against step ${i - 1}`).toBeGreaterThan(steps[i - 1]);
+      }
+    });
+
+    it('comes to a stop rather than halting dead', () => {
+      const walk = controller(groundStub());
+      for (let i = 0; i < 120; i++) {
+        walk.update(1 / 60, { forward: 1, turn: 0, run: false, jump: false });
+      }
+      const atRelease = walk.positionZ;
+      walk.update(1 / 60, { forward: 0, turn: 0, run: false, jump: false });
+      const firstFrame = walk.positionZ - atRelease;
+      expect(firstFrame).withContext('still carrying speed the frame after release').toBeGreaterThan(0);
+
+      for (let i = 0; i < 120; i++) {
+        walk.update(1 / 60, { forward: 0, turn: 0, run: false, jump: false });
+      }
+      const settled = walk.positionZ;
+      walk.update(1 / 60, { forward: 0, turn: 0, run: false, jump: false });
+      expect(walk.positionZ).withContext('fully stopped').toBeCloseTo(settled, 5);
+    });
+
+    /**
+     * Foot sliding is the single clearest tell that a character is being dragged
+     * rather than walking, and it is what a fixed playback rate guarantees.
+     */
+    it('scales playback with ground speed so the feet stay planted', () => {
+      const slow = rateTracking();
+      const walkSlow = new WalkController(slow.character, 0, 0, YAW_STREET, groundStub());
+      for (let i = 0; i < 200; i++) {
+        walkSlow.update(1 / 60, { forward: 1, turn: 0, run: false, jump: false });
+      }
+
+      const fast = rateTracking();
+      const walkFast = new WalkController(fast.character, 0, 0, YAW_STREET, groundStub());
+      for (let i = 0; i < 200; i++) {
+        walkFast.update(1 / 60, { forward: 1, turn: 0, run: true, jump: false });
+      }
+
+      const walkRate = slow.rates.at(-1)!;
+      const runRate = fast.rates.at(-1)!;
+      expect(walkRate).withContext('walk plays at roughly its authored rate').toBeCloseTo(1, 1);
+      expect(runRate).withContext('running steps faster than walking').toBeGreaterThan(walkRate * 1.5);
+    });
   });
 
   it('reports a hotspot once inside its radius', () => {

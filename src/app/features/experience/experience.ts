@@ -176,6 +176,10 @@ export class Experience implements AfterViewInit, OnDestroy {
     this.world?.requestInteract();
   }
 
+  protected requestJump(): void {
+    this.world?.requestJump();
+  }
+
   protected onTouchAxes(axes: { forward: number; turn: number }): void {
     this.world?.setTouchAxes(axes.forward, axes.turn);
   }

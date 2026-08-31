@@ -15,6 +15,8 @@ export class InputSource {
   private touchTurn = 0;
   /** Latched interact request, cleared when read. */
   private interactQueued = false;
+  /** Latched jump request, cleared when read. */
+  private jumpQueued = false;
 
   private enabled = true;
   private readonly target: Window;
@@ -43,14 +45,23 @@ export class InputSource {
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     if (!this.enabled) return;
 
-    if (event.code === 'KeyE' || event.code === 'Enter' || event.code === 'Space') {
+    // Space is jump, not interact. It used to be an undocumented third alias for
+    // opening a panel, which meant the most conventional jump key on a keyboard
+    // silently did something else.
+    if (event.code === 'Space') {
+      // Ignore the autorepeat a held key produces: one press, one jump.
+      if (!event.repeat) this.jumpQueued = true;
+      event.preventDefault();
+      return;
+    }
+    if (event.code === 'KeyE' || event.code === 'Enter') {
       this.interactQueued = true;
       event.preventDefault();
       return;
     }
     if (InputSource.MOVE_KEYS.has(event.code)) {
       this.keys.add(event.code);
-      // Arrow keys and space would otherwise scroll the page underneath.
+      // Arrow keys would otherwise scroll the page underneath.
       event.preventDefault();
     }
   };
@@ -63,6 +74,7 @@ export class InputSource {
     this.keys.clear();
     this.touchForward = 0;
     this.touchTurn = 0;
+    this.jumpQueued = false;
   };
 
   /** Disables input while a dialog owns the keyboard. */
@@ -72,6 +84,7 @@ export class InputSource {
       this.keys.clear();
       this.touchForward = 0;
       this.touchTurn = 0;
+      this.jumpQueued = false;
     }
   }
 
@@ -82,7 +95,7 @@ export class InputSource {
   }
 
   readIntent(): MoveIntent {
-    if (!this.enabled) return { forward: 0, turn: 0, run: false };
+    if (!this.enabled) return { forward: 0, turn: 0, run: false, jump: false };
 
     const held = (...codes: string[]) => codes.some((c) => this.keys.has(c));
 
@@ -106,6 +119,9 @@ export class InputSource {
       // modifier available. The deflection rule must not apply to the keyboard:
       // a held key is always exactly 1, so every step would have been a sprint.
       run: held('ShiftLeft', 'ShiftRight') || (usingTouch && Math.abs(forward) > 0.85),
+      // Consumed here rather than through its own accessor, so a jump pressed
+      // between frames is never dropped and never fires twice.
+      jump: this.consumeJump(),
     };
   }
 
@@ -119,6 +135,18 @@ export class InputSource {
   /** Queues an interact from a UI button press. */
   queueInteract(): void {
     this.interactQueued = true;
+  }
+
+  /** Queues a jump from the on-screen button. */
+  queueJump(): void {
+    this.jumpQueued = true;
+  }
+
+  /** Returns true at most once per press. */
+  private consumeJump(): boolean {
+    if (!this.jumpQueued) return false;
+    this.jumpQueued = false;
+    return true;
   }
 
   dispose(): void {

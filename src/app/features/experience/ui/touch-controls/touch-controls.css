@@ -41,6 +41,14 @@
   /* No transition: the knob must track the finger exactly. */
 }
 
+/* Stacked so the thumb reaches both without the pair crowding the corner. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
 .action {
   pointer-events: auto;
   touch-action: none;
@@ -55,6 +63,15 @@
   font-size: 0.875rem;
   letter-spacing: 0.1em;
   cursor: pointer;
+}
+
+/* Wider than round: it carries a word, and jump is pressed far more often than
+   interact, so it gets the larger target nearer the thumb. */
+.action--jump {
+  width: 84px;
+  height: 52px;
+  border-radius: 26px;
+  font-size: 0.75rem;
 }
 
 .action:active {

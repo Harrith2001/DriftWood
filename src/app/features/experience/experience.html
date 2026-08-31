@@ -32,7 +32,11 @@
     />
 
     @if (isTouch() && state.openPanel() === null) {
-      <app-touch-controls (axes)="onTouchAxes($event)" (interact)="requestInteract()" />
+      <app-touch-controls
+        (axes)="onTouchAxes($event)"
+        (interact)="requestInteract()"
+        (jump)="requestJump()"
+      />
     }
   }
 

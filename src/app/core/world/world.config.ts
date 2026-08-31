@@ -97,9 +97,42 @@ export const BODY_RADIUS = 0.45;
 
 // ── Movement ─────────────────────────────────────────────────────────────────
 
-export const WALK_SPEED = 4.2; // world units / second
-export const RUN_MULTIPLIER = 1.9;
+/**
+ * Walking pace, in metres per second.
+ *
+ * A real walk is about 1.4 and a jog about 3. This sat at 4.2 — a sprint, played
+ * through a walk cycle, which is why the feet skated: no playback rate makes a
+ * walk animation cover four metres a second honestly. Slower reads as walking,
+ * and the run multiplier is there for covering ground.
+ */
+export const WALK_SPEED = 2.9;
+export const RUN_MULTIPLIER = 2.0;
+/**
+ * Ground speed the walk clip is authored for. Playback is scaled by the ratio of
+ * actual speed to this, which is what stops the feet sliding.
+ */
+export const STRIDE_SPEED = 2.9;
+/** How hard the character accelerates and brakes, in m/s². */
+export const ACCELERATION = 14;
 export const TURN_SPEED = 2.9; // radians / second
+
+// ── Jumping ──────────────────────────────────────────────────────────────────
+
+/**
+ * Take-off speed and gravity, tuned together for a half-metre hop of about half
+ * a second — roughly what a person clears standing, and short enough that it
+ * reads as a step over something rather than a flight.
+ *
+ * Gravity is well above 9.81. Real gravity over a jump this small feels floaty
+ * on screen, because the camera is close and there is no body weight to sell the
+ * hang time.
+ */
+export const JUMP_SPEED = 4.0;
+export const GRAVITY = 16;
+/** Highest step the character walks over without needing to jump. */
+export const STEP_HEIGHT = 0.45;
+/** Chest height, where the body is widest and collision matters most. */
+export const CHEST_HEIGHT = 1.25;
 
 // ── Third-person camera rig ──────────────────────────────────────────────────
 
@@ -128,17 +161,24 @@ export const CAM_MIN_DISTANCE = 1.5;
 // ── Hotspots ─────────────────────────────────────────────────────────────────
 
 /**
- * Discoverable locations, all verified by the probe to sit on reachable,
- * near-level ground. Colours read as street lighting rather than as UI: the
- * model's own emissive materials are sodium orange and white, so these sit in
- * the same family.
+ * Discoverable locations, all verified by the probe to sit on reachable ground.
+ *
+ * Spread across the whole neighbourhood rather than clustered in the plaza: the
+ * walkable area is 10,500 m² and 52 metres of climb, so four beacons within one
+ * street of each other would have left every other direction empty. They now sit
+ * twenty metres apart vertically and up to ninety apart on the ground, which
+ * makes reaching each one an actual walk — down the stairs, up the hill, along
+ * the main road east.
+ *
+ * Colours read as street lighting rather than as UI: the model's own emissive
+ * materials are sodium orange and white, so these sit in the same family.
  */
 export const HOTSPOTS: readonly Hotspot[] = [
   {
     id: 'projects',
     label: 'Projects',
     x: -10,
-    z: 2, // west side of the plaza
+    z: 2, // the plaza, a few strides from where you land
     y: 0.22,
     radius: 1.9,
     color: 0x5ecfff,
@@ -146,27 +186,27 @@ export const HOTSPOTS: readonly Hotspot[] = [
   {
     id: 'about',
     label: 'About',
-    x: 10,
-    z: -2, // east side, below the tenement block
-    y: 0.4,
+    x: 48,
+    z: -28, // east along the main road, under the tenement blocks
+    y: 2.07,
     radius: 1.9,
     color: 0xffa53d,
   },
   {
     id: 'skills',
     label: 'Skills',
-    x: -8,
-    z: 8, // outside the shopfronts on the north side
-    y: 0.23,
+    x: -26,
+    z: 30, // up the hill, thirteen metres above the plaza
+    y: 13.54,
     radius: 1.9,
     color: 0xc08bff,
   },
   {
     id: 'contact',
     label: 'Contact',
-    x: -2,
-    z: -22, // down the street that descends to the north
-    y: -1.22,
+    x: -11,
+    z: -42, // down the stair street, seven metres below the plaza
+    y: -6.88,
     radius: 1.9,
     color: 0xff6b6b,
   },

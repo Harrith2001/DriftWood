@@ -422,9 +422,9 @@ function probeWorld(wx, wz) {
 const CANDIDATES = {
   landing: [LANDING.x, LANDING.z],
   projects: [-10, 2],
-  about: [10, -1],
-  skills: [-8, 8],
-  contact: [-2, -22],
+  about: [48, -28],
+  skills: [-26, 30],
+  contact: [-11, -42],
 };
 
 /**

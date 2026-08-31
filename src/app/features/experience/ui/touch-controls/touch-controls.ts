@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, output, signal } from '@angular/core';
 
 /**
- * On-screen joystick and interact button for touch devices.
+ * On-screen joystick, jump and interact buttons for touch devices.
  *
  * Without this the entire city is unreachable on a phone — the character has
  * no keyboard to drive it. The stick reports normalised axes continuously and
@@ -18,6 +18,7 @@ export class TouchControls {
   /** Emits normalised axes: forward -1..1, turn -1..1. */
   readonly axes = output<{ forward: number; turn: number }>();
   readonly interact = output<void>();
+  readonly jump = output<void>();
 
   protected readonly knobX = signal(0);
   protected readonly knobY = signal(0);
