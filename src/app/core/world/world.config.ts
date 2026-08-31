@@ -66,18 +66,22 @@ export const FOV_EXPLORE = 58;
 // ── Walkable ground ──────────────────────────────────────────────────────────
 
 /**
- * Outer fence for the playable area — the plaza plus the street that descends
- * away from it to the north.
+ * Outer fence for the playable area: the whole neighbourhood.
+ *
+ * Derived, not authored — this is the bounding box of everything the walkability
+ * probe could actually reach on foot from the landing point, which is 10,500 m²
+ * of plaza, side streets, stair flights and hillside spanning 52 metres of
+ * climb. Re-run `tools/dev/probe-city.mjs` after changing the model and paste
+ * its reported bounds back here.
  *
  * This is a boundary, not a map. On the beach these rectangles tried to describe
  * the walkable surface itself and cost a long run of bugs: one overhung the
  * shoreline, two abutting ones left a dead seam, and none of them knew about the
- * water. Here the geometry answers that question directly — the rectangle only
- * stops the visitor wandering the full 284 metres of hillside into parts of the
- * model that were never dressed for a close look.
+ * water. Here the geometry answers that question directly, and the rectangle
+ * only catches anything the probe's own bounds did not.
  */
 export const WALKABLE: readonly Region[] = [
-  { minX: -19, maxX: 19, minZ: -34, maxZ: 15 },
+  { minX: -74, maxX: 75, minZ: -162, maxZ: 74 },
 ];
 
 /**
@@ -108,8 +112,18 @@ export const CAM_FOLLOW_HEIGHT = 2.7;
 /** How far in front of the character the rig aims. */
 export const CAM_LOOK_AHEAD = 2.0;
 export const CAM_LOOK_HEIGHT = 1.55;
-/** Closest the rig may pull in when geometry blocks the ideal position. */
-export const CAM_MIN_DISTANCE = 2.6;
+/**
+ * Closest the rig may pull in when geometry blocks the ideal position.
+ *
+ * This is a floor on the pull-in, so it is also the distance at which the camera
+ * stops respecting walls: anything nearer than this and the rig sits inside the
+ * geometry regardless. At 2.6 that happened constantly once the alleys and stair
+ * flights opened up — they are narrower than the camera's own standoff, so
+ * walking one put the lens through a wall and filled a third of the frame with
+ * the inside of it. Close enough now to stay in the street; the near plane is
+ * 0.4, so there is still room in front of it.
+ */
+export const CAM_MIN_DISTANCE = 1.5;
 
 // ── Hotspots ─────────────────────────────────────────────────────────────────
 
@@ -125,7 +139,7 @@ export const HOTSPOTS: readonly Hotspot[] = [
     label: 'Projects',
     x: -10,
     z: 2, // west side of the plaza
-    y: 0.0,
+    y: 0.22,
     radius: 1.9,
     color: 0x5ecfff,
   },
@@ -133,8 +147,8 @@ export const HOTSPOTS: readonly Hotspot[] = [
     id: 'about',
     label: 'About',
     x: 10,
-    z: -1, // east side, below the tenement block
-    y: 0.84,
+    z: -2, // east side, below the tenement block
+    y: 0.4,
     radius: 1.9,
     color: 0xffa53d,
   },
@@ -143,7 +157,7 @@ export const HOTSPOTS: readonly Hotspot[] = [
     label: 'Skills',
     x: -8,
     z: 8, // outside the shopfronts on the north side
-    y: 0.2,
+    y: 0.23,
     radius: 1.9,
     color: 0xc08bff,
   },
@@ -152,7 +166,7 @@ export const HOTSPOTS: readonly Hotspot[] = [
     label: 'Contact',
     x: -2,
     z: -22, // down the street that descends to the north
-    y: -1.16,
+    y: -1.22,
     radius: 1.9,
     color: 0xff6b6b,
   },

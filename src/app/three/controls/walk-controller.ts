@@ -38,6 +38,8 @@ export class WalkController {
   private gait = 0;
   /** Eased surface height under the character. */
   private groundHeight = GROUND_Y;
+  /** How far the eased height may trail the real surface, in metres. */
+  private static readonly MAX_GROUND_LAG = 0.28;
 
   constructor(
     private readonly character: Character,
@@ -108,12 +110,24 @@ export class WalkController {
     }
 
     // Follow the real surface rather than a constant. The streets here climb and
-    // fall by 25 metres across the playable area, and kerbs put pavement and
+    // fall by 52 metres across the neighbourhood, and kerbs put pavement and
     // roadway at different heights within a stride of each other, so a fixed
     // height would leave the character hovering in some places and sunk in
     // others. Eased, so stepping down a kerb is a settle rather than a snap.
     const surface = this.ground?.heightAt(this.x, this.z, this.groundHeight) ?? GROUND_Y;
     this.groundHeight = THREE.MathUtils.lerp(this.groundHeight, surface, Math.min(1, delta * 12));
+
+    // …but never more than a stride behind it. The stair flights run at a 1.2
+    // gradient, so walking up one lifts the ground beneath him at about five
+    // metres a second — far faster than the easing above can follow, and he
+    // waded through the treads up to the knee the whole way. Clamping the error
+    // keeps the smoothing where it earns its keep (kerbs, thresholds) without
+    // letting it lie about where the ground is.
+    this.groundHeight = THREE.MathUtils.clamp(
+      this.groundHeight,
+      surface - WalkController.MAX_GROUND_LAG,
+      surface + WalkController.MAX_GROUND_LAG,
+    );
 
     this.character.setGroundPosition(this.x, this.z, this.groundHeight);
     this.character.setYaw(this.yaw);

@@ -105,6 +105,33 @@ describe('WalkController', () => {
     expect(walk.positionZ).toBeLessThanOrEqual(6);
   });
 
+  /**
+   * The stair flights run at a 1.2 gradient, so walking up one lifts the ground
+   * under the character at about five metres a second. The easing that makes
+   * kerbs feel like a settle rather than a snap cannot follow that on its own —
+   * he waded through the treads up to the knee the whole way up.
+   */
+  it('keeps up with ground that climbs as fast as the stairs do', () => {
+    const character = characterStub();
+    const heights: number[] = [];
+    (character as unknown as { setGroundPosition: (x: number, z: number, y: number) => void })
+      .setGroundPosition = (_x, _z, y) => heights.push(y);
+
+    // A 1.2 gradient running the length of the walk, as the stair flights do.
+    const slope = {
+      heightAt: (_x: number, z: number) => (z - LANDING.z) * 1.2,
+      hasGround: () => true,
+    } as unknown as GroundSampler;
+
+    const walk = new WalkController(character, LANDING.x, LANDING.z, YAW_STREET, slope);
+    for (let i = 0; i < 120; i++) walk.update(1 / 60, { forward: 1, turn: 0, run: false });
+
+    const expected = (walk.positionZ - LANDING.z) * 1.2;
+    expect(Math.abs(walk.surfaceY - expected))
+      .withContext('character height against the real stair surface')
+      .toBeLessThan(0.3);
+  });
+
   it('reports a hotspot once inside its radius', () => {
     const spot = HOTSPOTS[0];
     const walk = new WalkController(characterStub(), spot.x, spot.z, YAW_STREET);

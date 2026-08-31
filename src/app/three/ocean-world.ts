@@ -15,7 +15,7 @@ import {
 } from '../core/world/world.config';
 import { RenderPipeline } from './engine/renderer';
 import { AssetLoader } from './loading/asset-loader';
-import { createLighting } from './world/lighting';
+import { createLighting, type Lighting } from './world/lighting';
 import { createSky } from './world/sky';
 import { CloudField } from './world/clouds';
 import { Environment } from './world/environment';
@@ -68,6 +68,7 @@ export class OceanWorld {
   private character!: Character;
   private impact!: ImpactBurst;
   private arrival!: ArrivalSequence;
+  private lighting!: Lighting;
   private groundSampler = new GroundSampler();
   private walk!: WalkController;
   private input!: InputSource;
@@ -90,7 +91,8 @@ export class OceanWorld {
     const { mesh: sky, fog } = createSky();
     this.scene.add(sky);
     this.scene.fog = fog;
-    this.scene.add(createLighting(this.quality));
+    this.lighting = createLighting(this.quality);
+    this.scene.add(this.lighting.group);
 
     this.clouds = new CloudField(this.quality.cloudCount);
     this.scene.add(this.clouds.group);
@@ -226,6 +228,21 @@ export class OceanWorld {
 
     this.input.setEnabled(true);
     this.callbacks.onLanded();
+    // Development only — `ngDevMode` is compiled away in a production build, so
+    // this whole block is tree-shaken out of the shipped bundle.
+    //
+    // Worth keeping. Where the character may walk is decided by a map generated
+    // offline from the mesh, and the only way to know the running game agrees
+    // with that map is to drive him around and compare: record positions from
+    // here, then feed them back through `node tools/dev/probe-city.mjs <file>`.
+    // Reading either side on its own is exactly how he ended up inside a shop.
+    if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+      (window as unknown as { driftwood?: unknown }).driftwood = {
+        walk: this.walk,
+        rig: this.rig,
+        ground: this.groundSampler,
+      };
+    }
   }
 
   // ── Frame ──────────────────────────────────────────────────────────────────
@@ -275,6 +292,11 @@ export class OceanWorld {
       FOV_EXPLORE,
       this.walk.surfaceY,
     );
+
+    // Carry the shadow frustum along. It covers a 60-metre box and the
+    // neighbourhood is 150 across, so left at the origin the character walks out
+    // of his own shadow within a few strides of the plaza.
+    this.lighting.follow(this.walk.positionX, this.walk.surfaceY, this.walk.positionZ);
   }
 
   // ── External control ───────────────────────────────────────────────────────

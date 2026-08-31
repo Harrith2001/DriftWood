@@ -116,6 +116,29 @@ describe('CameraRig occlusion stability', () => {
     expect(rig.camera.position.y).toBeCloseTo(below + 2.7, 0);
   });
 
+  /**
+   * The seat height is measured from the character's footing, which is wrong on
+   * a hill: walking downhill leaves the rig six metres back up a slope that has
+   * risen in the meantime, putting the camera under the road behind it.
+   */
+  it('lifts the camera above ground that has risen behind the character', () => {
+    const rig = makeRig();
+
+    // A slab where the camera wants to sit, well above the character's footing.
+    const bank = new THREE.Mesh(new THREE.BoxGeometry(20, 1, 6), new THREE.MeshBasicMaterial());
+    bank.position.set(0, GROUND_Y + 4, -CAM_FOLLOW_DISTANCE);
+    bank.updateMatrixWorld(true);
+    rig.setColliders([bank]);
+
+    for (let i = 0; i < 200; i++) {
+      rig.followCharacter(0, 0, YAW, FRAME, 58, GROUND_Y);
+      rig.update(FRAME, 1000);
+    }
+
+    // Top of the slab is GROUND_Y + 4.5; the camera must clear it.
+    expect(rig.camera.position.y).toBeGreaterThan(GROUND_Y + 4.5);
+  });
+
   it('keeps a depth range precise enough not to z-fight foliage', () => {
     const rig = makeRig();
     // Overlapping leaf cards at near-identical depths need headroom in the

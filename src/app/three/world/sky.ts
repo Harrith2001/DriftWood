@@ -71,8 +71,10 @@ export function createSky(): { mesh: THREE.Mesh; fog: THREE.FogExp2 } {
   // pitches steeply during the dive.
   mesh.frustumCulled = false;
 
-  // Lima's garúa. Tuned so the street the visitor is standing in stays clear
-  // while the far end of the model — 200 metres off, and never dressed to be
-  // looked at closely — dissolves before its edge can be seen.
-  return { mesh, fog: new THREE.FogExp2(0x3a3542, 0.011) };
+  // Lima's garúa. Thin enough to see the length of a street and read the hill
+  // stacked above it, thick enough that the far edge of the model dissolves
+  // before it can be seen. It was twice this until the playable area opened up
+  // to the whole neighbourhood, at which point walking two streets from the
+  // plaza meant walking into a grey wall.
+  return { mesh, fog: new THREE.FogExp2(0x3a3542, 0.0055) };
 }

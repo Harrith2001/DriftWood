@@ -41,13 +41,30 @@ export class GroundSampler {
    * the terrace below is never picked up through the one you are standing on.
    */
   private static readonly PROBE_ABOVE = 2.0;
-  private static readonly PROBE_DEPTH = 3.0;
+  /**
+   * Deep enough to see down a staircase.
+   *
+   * The window reaches `PROBE_DEPTH - PROBE_ABOVE` below the character, and the
+   * streets here fall a metre for every metre travelled. At a 1.0 reach the
+   * probe found nothing off the edge of a step roughly as often as it did, so
+   * walking down a flight turned into a stutter of blocked frames. Still well
+   * short of the three metres that separate one terrace from the one below, so
+   * the road down there is never picked up through the one being stood on.
+   */
+  private static readonly PROBE_DEPTH = 3.5;
   /** Cache resolution, in world units. */
   private static readonly GRID = 0.25;
   /** Offset of the extra samples used to bridge gaps between kerbs and slabs. */
   private static readonly SPREAD = 0.16;
-  /** Height band the cache is keyed on, in world units. */
-  private static readonly BAND = 2.0;
+  /**
+   * Height band the cache is keyed on, in world units.
+   *
+   * Only a cache key — the ray itself is cast from the height it was given. An
+   * earlier version cast from the *quantised* band instead, which at a two-metre
+   * band put the window up to a metre away from where the character actually
+   * stood and swallowed the whole downward reach.
+   */
+  private static readonly BAND = 0.5;
 
   setTargets(targets: readonly THREE.Object3D[]): void {
     this.targets = targets;
@@ -77,7 +94,8 @@ export class GroundSampler {
     const cx = gx * GroundSampler.GRID;
     const cz = gz * GroundSampler.GRID;
     const o = GroundSampler.SPREAD;
-    const from = band * GroundSampler.BAND;
+    // Cast from where the character actually is, not from the rounded band.
+    const from = nearY;
 
     // Several samples, taking the first that lands. Road surfaces here are
     // separate slabs per block with real gaps at the kerbs, and a single point

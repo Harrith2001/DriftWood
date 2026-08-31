@@ -67,6 +67,11 @@ export class CameraRig {
    */
   private static readonly OCCLUSION_HOLD = 0.35;
 
+  /** Straight down, for the ground-clearance probe. */
+  private static readonly DOWN = new THREE.Vector3(0, -1, 0);
+  /** How far above the surface beneath it the camera is kept. */
+  private static readonly GROUND_CLEARANCE = 0.9;
+
   /**
    * Trauma-based shake. Stored as trauma rather than raw offset and applied as
    * trauma², so it decays smoothly and a big hit reads very differently from a
@@ -191,8 +196,36 @@ export class CameraRig {
       groundY + CAM_FOLLOW_HEIGHT * Math.max(0.55, heightScale),
       z - cos * this.occludedDistance,
     );
+    this.liftAboveGround();
     this.desiredTarget.set(x + sin * CAM_LOOK_AHEAD, groundY + CAM_LOOK_HEIGHT, z + cos * CAM_LOOK_AHEAD);
     this.desiredFov = fov;
+  }
+
+  /**
+   * Keeps the camera above whatever it is standing over.
+   *
+   * The seat height above is measured from the *character's* footing, which is
+   * the right reference on level ground and wrong on a hill: walking downhill
+   * puts the rig six metres back up a slope that has risen several metres in the
+   * meantime, so the camera ends up at or under the road behind it and the lower
+   * third of the frame fills with tarmac seen edge-on. Sampling the surface
+   * directly beneath the seat and lifting to clear it costs one cast and fixes
+   * every case, including the stair flights, where the drop is steepest.
+   */
+  private liftAboveGround(): void {
+    if (!this.colliders.length) return;
+
+    // From well above the seat, so the ray starts outside the road slab even
+    // when the seat itself has ended up inside it.
+    this.tmpOrigin.set(this.desiredPosition.x, this.desiredPosition.y + 6, this.desiredPosition.z);
+    this.raycaster.set(this.tmpOrigin, CameraRig.DOWN);
+    this.raycaster.far = 12;
+
+    const hit = this.raycaster.intersectObjects(this.colliders as THREE.Object3D[], false)[0];
+    if (!hit) return;
+
+    const floor = hit.point.y + CameraRig.GROUND_CLEARANCE;
+    if (this.desiredPosition.y < floor) this.desiredPosition.y = floor;
   }
 
   /** Adds impact energy. Values are additive and clamped; 1 is a hard landing. */

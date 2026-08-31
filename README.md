@@ -116,15 +116,31 @@ A few things in here are load-bearing and easy to break:
 - **Ground probing** (`three/world/ground-sampler.ts`). Walkability is sampled
   from the real geometry against an allow-list of standable materials, not from
   hand-measured rectangles. The probe window travels with the character, because
-  the playable streets climb and fall by 25 metres and several rooftops sit at
-  exactly the height of a road one street over.
+  the neighbourhood climbs and falls by 52 metres and several rooftops sit at
+  exactly the height of a road one street over. It is cast from the height it is
+  given, and the cache band is only a key — casting from the *rounded* band put
+  the window a metre off the real footing and starved the downward reach, which
+  showed up as the character stalling every few steps on a staircase.
 - **The walkability map** (`tools/dev/probe-city.mjs` → `core/world/city-blockers.ts`).
   Where you can walk is read off the mesh, not drawn over a screenshot. The probe
-  rasterises every triangle onto a grid, flood-fills to find what is reachable on
-  foot, and emits the blocked rectangles as a generated file. Re-run it after
-  changing the model — and keep its `WALKABLE` set in step with
-  `WALKABLE_SURFACE` in `three/world/environment.ts`, since the two answer the
-  same question in different places.
+  rasterises every triangle onto a half-metre grid, flood-fills from the landing
+  point to find what is reachable on foot, and emits everything else as blocked
+  rectangles. Re-run it after changing the model — and keep its `WALKABLE` set in
+  step with `WALKABLE_SURFACE` in `three/world/environment.ts`, since the two
+  answer the same question in different places.
+
+  It deliberately does *not* test the slope of the triangles under a cell. That
+  is the wrong question for a staircase, whose risers are vertical and whose
+  treads are flat: a per-triangle slope test rejects every stair in the model
+  while happily accepting a smooth 30° bank. What decides it is the height
+  difference between one foothold and the next, capped by `MAX_GRADIENT` — set
+  from the stair flights, at 1.4.
+
+  Pass a JSON file of recorded `[x, z, y]` positions as an argument and it
+  checks them against the map. That is how the two are kept honest: drive the
+  character around with the `driftwood` dev hook (development builds only, see
+  `three/ocean-world.ts`), then feed the trace back. Reading either side alone is
+  how he ended up standing in a shop.
 - **Why the blockers are baked and not probed.** Most buildings here are modelled
   from below the roadway up through it, so a raycast through the space the body
   would occupy sits strictly inside the solid with no face along it to hit. There
@@ -135,6 +151,13 @@ A few things in here are load-bearing and easy to break:
   used. Fading needs per-object granularity that downloaded environments rarely
   have — see the note in `three/camera/camera-rig.ts` for what that cost last
   time.
+- **The camera on a hill.** Its seat height is measured from the character's
+  footing, which is right on the level and wrong on a slope: walking downhill
+  leaves the rig six metres back up ground that has risen in the meantime, so it
+  ends up under the road behind it. `liftAboveGround` samples the surface under
+  the seat and clears it. The alleys are also narrower than the rig's own
+  standoff, which is why `CAM_MIN_DISTANCE` is 1.5 — below that it stops
+  respecting walls entirely.
 
 ## Credits
 

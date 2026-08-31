@@ -10,7 +10,21 @@ import type { QualitySettings } from '../../core/models/experience.model';
  * with daylight in them and have no normal or roughness maps at all, so lighting
  * it as darkly as the sky implies flattens every facade into the same grey.
  */
-export function createLighting(quality: QualitySettings): THREE.Group {
+export interface Lighting {
+  readonly group: THREE.Group;
+  /**
+   * Moves the shadow frustum to wherever the character is.
+   *
+   * A directional light's shadow camera is orthographic and finite. Sized to
+   * cover the whole neighbourhood — 150 metres across and 52 of climb — its
+   * texels would be so coarse that every shadow turned to mush, so it is kept
+   * tight and carried along instead. Left fixed at the origin, shadows simply
+   * stopped a few strides from the plaza.
+   */
+  follow(x: number, y: number, z: number): void;
+}
+
+export function createLighting(quality: QualitySettings): Lighting {
   const group = new THREE.Group();
   group.name = 'lighting';
 
@@ -20,15 +34,21 @@ export function createLighting(quality: QualitySettings): THREE.Group {
   // To the west and high enough to reach the roadway. Raking it along the street
   // at a true dusk angle looked right on the facades and left the road itself
   // unlit, which is the half of the frame the visitor is actually standing in.
-  sun.position.set(-30, 24, 14);
+  //
+  // Offset from the light's target rather than an absolute position, so the
+  // whole rig can be carried along with the character below.
+  const SUN_OFFSET = new THREE.Vector3(-30, 24, 14);
+  sun.position.copy(SUN_OFFSET);
+  group.add(sun.target);
 
   if (quality.shadows) {
     sun.castShadow = true;
     sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
-    // The frustum covers the playable streets, not the sky column the character
-    // falls through or the 284 metres of hillside behind them — a tighter box
-    // means sharper shadows per texel.
-    const extent = 26;
+    // Only wide enough to cover what is on screen. The neighbourhood is 150
+    // metres across; a frustum that spanned it would spread the same shadow map
+    // over thirty times the area and turn every edge to mush, so it stays tight
+    // and travels instead.
+    const extent = 30;
     sun.shadow.camera.left = -extent;
     sun.shadow.camera.right = extent;
     sun.shadow.camera.top = extent;
@@ -51,5 +71,15 @@ export function createLighting(quality: QualitySettings): THREE.Group {
   // Sky above, warm sodium bounce off the tarmac below.
   group.add(new THREE.HemisphereLight(0x7b88b8, 0x6d5340, 1.0));
 
-  return group;
+  return {
+    group,
+    follow(x, y, z) {
+      sun.target.position.set(x, y, z);
+      sun.position.set(x + SUN_OFFSET.x, y + SUN_OFFSET.y, z + SUN_OFFSET.z);
+      // The target is a plain Object3D the light reads through its world matrix,
+      // and nothing else in the scene graph will refresh it — it has no geometry
+      // to render. Without this the shadow frustum keeps aiming at the origin.
+      sun.target.updateMatrixWorld(true);
+    },
+  };
 }
