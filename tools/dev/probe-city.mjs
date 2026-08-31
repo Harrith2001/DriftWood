@@ -81,6 +81,21 @@ const STEP_OVER = 0.35;
  */
 const ROOF_LIMIT = 5.0;
 
+/**
+ * Ceiling on where the visitor may climb, in world height.
+ *
+ * Not an arbitrary fence. Measured: below this the reachable ground is roadway,
+ * pavement and yard; above it there is not one square metre of any of them, only
+ * bare hillside — 4,000 m² of undressed dirt carrying backdrop geometry built to
+ * be read from the street far below. Standing among it, the illusion collapses:
+ * walls end in mid-air, a shack sits over a gap, and the camera has nowhere to
+ * go on slopes that steep.
+ *
+ * So the limit is where the model stops being a place and starts being scenery.
+ * Every street, stair flight and alley is below it.
+ */
+const MAX_WALKABLE_Y = 6.0;
+
 /** Where the model is seated; see MODEL_OFFSET in world.config.ts. */
 const PLACEMENT = { x: 29, y: 2.2, z: -6 };
 /** Where the arrival puts the character down, in world coordinates. */
@@ -159,6 +174,7 @@ const floor = new Float32Array(COLS * ROWS).fill(NaN);
 const solidLow = new Float32Array(COLS * ROWS).fill(Infinity);
 const solidHigh = new Float32Array(COLS * ROWS).fill(-Infinity);
 const roofY = new Float32Array(COLS * ROWS).fill(Infinity);
+const floorMat = new Array(COLS * ROWS).fill(null);
 
 const cx = (col) => X0 + (col + 0.5) * CELL;
 const cz = (row) => Z0 + (row + 0.5) * CELL;
@@ -200,7 +216,7 @@ for (const pass of [1, 2]) {
         const k = row * COLS + col;
 
         if (walkable) {
-          if (Number.isNaN(floor[k]) || y > floor[k]) floor[k] = y;
+          if (Number.isNaN(floor[k]) || y > floor[k]) { floor[k] = y; floorMat[k] = mat; }
         } else {
           if (y < solidLow[k]) solidLow[k] = y;
           if (y > solidHigh[k]) solidHigh[k] = y;
@@ -223,6 +239,8 @@ for (const pass of [1, 2]) {
  */
 function standable(k) {
   if (Number.isNaN(floor[k])) return false;
+  // Above the dressed part of the model — scenery, not a place.
+  if (floor[k] + PLACEMENT.y > MAX_WALKABLE_Y) return false;
   // Something occupying the space the body would fill.
   if (solidHigh[k] > floor[k] + STEP_OVER && solidLow[k] < floor[k] + CLEARANCE) return false;
   // A roof overhead: indoors.
@@ -284,6 +302,24 @@ const area = reachedCount * CELL * CELL;
 console.log(`\nReachable on foot from the landing point: ${area.toFixed(0)} m²`);
 console.log(`  world X[${minX.toFixed(1)} .. ${maxX.toFixed(1)}]  Z[${minZ.toFixed(1)} .. ${maxZ.toFixed(1)}]`);
 console.log(`  floor height ${loY.toFixed(2)} .. ${hiY.toFixed(2)}  (${(hiY - loY).toFixed(1)} m of climb)`);
+
+// What the reachable area is actually made of, by height.
+console.log('\nReachable ground by height band and surface:');
+console.log('  band'.padEnd(14), 'road'.padStart(8), 'yard'.padStart(8), 'terrain'.padStart(9));
+for (let lo = -25; lo < 32; lo += 5) {
+  let road = 0, yard = 0, dirt = 0;
+  for (let k = 0; k < reached.length; k++) {
+    if (!reached[k]) continue;
+    const y = floor[k] + PLACEMENT.y;
+    if (y < lo || y >= lo + 5) continue;
+    if (floorMat[k] === 'atlas_street') road++;
+    else if (floorMat[k] === 'concretopoor') yard++;
+    else dirt++;
+  }
+  if (!(road + yard + dirt)) continue;
+  const m2 = (n) => (n * CELL * CELL).toFixed(0) + ' m²';
+  console.log(('  ' + lo + '..' + (lo + 5)).padEnd(14), m2(road).padStart(8), m2(yard).padStart(8), m2(dirt).padStart(9));
+}
 
 // Play bounds, padded so the fence never clips ground the fill did reach.
 const PAD = 1;
@@ -416,7 +452,12 @@ function probeWorld(wx, wz) {
   const k = row * COLS + col;
   if (Number.isNaN(floor[k])) return { ok: false, why: 'no ground' };
   if (!reached[k]) return { ok: false, why: 'cannot be reached on foot' };
-  return { ok: true, y: floor[k] + PLACEMENT.y };
+  return {
+    ok: true,
+    y: floor[k] + PLACEMENT.y,
+    open: openness(col, row),
+    surface: floorMat[k],
+  };
 }
 
 const CANDIDATES = {
@@ -483,11 +524,110 @@ if (trace) {
   process.exit(bad.length ? 1 : 0);
 }
 
+/**
+ * Where would a fourth beacon go?
+ *
+ * Reports the reachable spot furthest from the ones already placed, so the four
+ * stay spread across the neighbourhood instead of clustering wherever the ground
+ * happened to be convenient.
+ */
+function furthestFrom(placed, maxWalk = 70) {
+  const options = [];
+  for (let row = 0; row < ROWS; row += 2) {
+    for (let col = 0; col < COLS; col += 2) {
+      const k = row * COLS + col;
+      if (!reached[k]) continue;
+      // Paved ground only. A beacon on bare hillside reads as a marker dropped
+      // in a field, and the dirt is the part of this model with nothing on it.
+      if (floorMat[k] !== 'atlas_street' && floorMat[k] !== 'concretopoor') continue;
+
+      const wx = cx(col) + PLACEMENT.x, wz = cz(row) + PLACEMENT.z;
+      let nearest = Infinity;
+      for (const [px, pz] of placed) nearest = Math.min(nearest, Math.hypot(wx - px, wz - pz));
+      // Far enough to be its own place, near enough to be worth walking to.
+      if (nearest > maxWalk) continue;
+      options.push({ x: Math.round(wx), z: Math.round(wz), y: floor[k] + PLACEMENT.y, nearest });
+    }
+  }
+  options.sort((a, b) => b.nearest - a.nearest);
+  return options.slice(0, 6);
+}
+
+/**
+ * Choose all four from scratch, greedily: start at the landing point and each
+ * time take the open paved spot furthest from everything placed so far. Doing it
+ * by hand is how one ended up on a shelf against a bank and another wedged
+ * against a wall.
+ */
+{
+  const placed = [[-10, 2], [48, -28], [-11, -42]];
+  const options = placeBeacon(placed, { minOpen: 0.85, maxWalk: 55 })
+    .filter((o) => o.nearest > 22);
+  console.log('\n=== Open paved spots for the remaining beacon ===');
+  for (const c of options.slice(0, 10)) {
+    console.log(
+      `  (${String(c.x).padStart(4)}, ${String(c.z).padStart(4)})  y = ${c.y.toFixed(2).padStart(6)}` +
+      `  open ${(c.open * 100).toFixed(0)}%  nearest ${c.nearest.toFixed(0)} m`,
+    );
+  }
+}
+
+/**
+ * How much open ground surrounds a cell.
+ *
+ * A beacon needs somewhere for the camera to stand, six metres back at chest
+ * height, and a spot that is merely *reachable* often has none: a shelf cut into
+ * a bank, a doorway, a gap between two walls. Put a hotspot there and the camera
+ * spends the whole visit inside a wall. Reachable neighbours are a good proxy —
+ * if the ground around you is walkable, there is room behind you.
+ */
+function openness(col, row, radius = 6) {
+  const step = Math.round(radius / CELL);
+  let open = 0, total = 0;
+  for (let dc = -step; dc <= step; dc++) {
+    for (let dr = -step; dr <= step; dr++) {
+      if (dc * dc + dr * dr > step * step) continue;
+      const nc = col + dc, nr = row + dr;
+      if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+      total++;
+      if (reached[nr * COLS + nc]) open++;
+    }
+  }
+  return total ? open / total : 0;
+}
+
+/** Paved, open, and as far from the already-placed beacons as possible. */
+function placeBeacon(placed, { minOpen = 0.72, maxWalk = 90 } = {}) {
+  const options = [];
+  for (let row = 0; row < ROWS; row += 2) {
+    for (let col = 0; col < COLS; col += 2) {
+      const k = row * COLS + col;
+      if (!reached[k]) continue;
+      if (floorMat[k] !== 'atlas_street' && floorMat[k] !== 'concretopoor') continue;
+
+      const open = openness(col, row);
+      if (open < minOpen) continue;
+
+      const wx = cx(col) + PLACEMENT.x, wz = cz(row) + PLACEMENT.z;
+      let nearest = Infinity;
+      for (const [px, pz] of placed) nearest = Math.min(nearest, Math.hypot(wx - px, wz - pz));
+      if (nearest > maxWalk) continue;
+
+      options.push({
+        x: Math.round(wx), z: Math.round(wz),
+        y: floor[k] + PLACEMENT.y, open, nearest,
+      });
+    }
+  }
+  options.sort((a, b) => b.nearest - a.nearest);
+  return options;
+}
+
 console.log('\n=== Authored coordinates ===');
 for (const [name, [wx, wz]] of Object.entries(CANDIDATES)) {
   const r = probeWorld(wx, wz);
   if (r.ok) {
-    console.log(`  ${name.padEnd(9)} world(${String(wx).padStart(4)}, ${String(wz).padStart(4)})  y = ${r.y.toFixed(2)}`);
+    console.log(`  ${name.padEnd(9)} world(${String(wx).padStart(4)}, ${String(wz).padStart(4)})  y = ${r.y.toFixed(2).padStart(6)}  open ${(r.open*100).toFixed(0).padStart(3)}%  ${r.surface ?? "?"}`);
     continue;
   }
   const alt = nearestReachable(wx, wz);

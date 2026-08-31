@@ -347,6 +347,30 @@ describe('WalkController', () => {
     }
   });
 
+  /**
+   * The model is only dressed up to about six metres above the plaza. Above that
+   * it is bare hillside carrying backdrop geometry built to be read from the
+   * street far below — walls that stop in mid-air, a shack over a gap, slopes too
+   * steep for the camera to sit on. The generated blockers fence it off, and this
+   * is what notices if a regenerated map ever stops doing so.
+   */
+  it('keeps the visitor off the undressed hillside', () => {
+    const walk = controller();
+    // Spots measured on the bare hill, all previously reachable.
+    for (const [x, z] of [[-30, 40], [-26, 30], [-28, 20], [-24, 14], [-21, 12]]) {
+      expect(walk.isWalkable(x, z))
+        .withContext(`bare hillside at (${x}, ${z})`)
+        .toBe(false);
+    }
+  });
+
+  it('keeps every hotspot below the dressed ceiling', () => {
+    // A beacon up on the backdrop terrain is both unreachable and ugly.
+    for (const spot of HOTSPOTS) {
+      expect(spot.y).withContext(`hotspot "${spot.id}" height`).toBeLessThan(6);
+    }
+  });
+
   it('keeps the hotspots far enough apart to be told apart', () => {
     // Overlapping radii would make the prompt flicker between two panels.
     for (const a of HOTSPOTS) {

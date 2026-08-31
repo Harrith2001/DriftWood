@@ -69,10 +69,14 @@ export const FOV_EXPLORE = 58;
  * Outer fence for the playable area: the whole neighbourhood.
  *
  * Derived, not authored — this is the bounding box of everything the walkability
- * probe could actually reach on foot from the landing point, which is 10,500 m²
- * of plaza, side streets, stair flights and hillside spanning 52 metres of
- * climb. Re-run `tools/dev/probe-city.mjs` after changing the model and paste
- * its reported bounds back here.
+ * probe could reach on foot from the landing point: 6,500 m² of plaza, side
+ * streets and stair flights spanning 28 metres of climb. Re-run
+ * `tools/dev/probe-city.mjs` after changing the model and paste its reported
+ * bounds back here.
+ *
+ * It used to reach 52 metres up, over the ridge. The probe's height cap now
+ * stops it at the point the model stops being dressed — see MAX_WALKABLE_Y in
+ * that script for the measurement behind the number.
  *
  * This is a boundary, not a map. On the beach these rectangles tried to describe
  * the walkable surface itself and cost a long run of bugs: one overhung the
@@ -81,7 +85,7 @@ export const FOV_EXPLORE = 58;
  * only catches anything the probe's own bounds did not.
  */
 export const WALKABLE: readonly Region[] = [
-  { minX: -74, maxX: 75, minZ: -162, maxZ: 74 },
+  { minX: -74, maxX: 75, minZ: -162, maxZ: 32 },
 ];
 
 /**
@@ -195,9 +199,9 @@ export const HOTSPOTS: readonly Hotspot[] = [
   {
     id: 'skills',
     label: 'Skills',
-    x: -26,
-    z: 30, // up the hill, thirteen metres above the plaza
-    y: 13.54,
+    x: -6,
+    z: -96, // the bottom of the long stairway, seventeen metres below the plaza
+    y: -17.27,
     radius: 1.9,
     color: 0xc08bff,
   },

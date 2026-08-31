@@ -247,6 +247,8 @@ export class OceanWorld {
         walk: this.walk,
         rig: this.rig,
         ground: this.groundSampler,
+        scene: this.scene,
+        environment: this.environment,
       };
     }
   }

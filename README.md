@@ -129,6 +129,16 @@ A few things in here are load-bearing and easy to break:
   step with `WALKABLE_SURFACE` in `three/world/environment.ts`, since the two
   answer the same question in different places.
 
+  It also caps how high the visitor may climb, and the number is measured rather
+  than chosen: below six metres the reachable ground is roadway, pavement and
+  yard; above it there is not one square metre of any of them, only bare hillside
+  carrying backdrop geometry built to be read from the street far below. Up there
+  the illusion collapses — walls end in mid-air, a shack sits over a gap, and the
+  slopes are too steep for the camera to find anywhere to sit. `find-floating.mjs`
+  is the diagnostic that established this: it looks for meshes with daylight under
+  them, and finding none on the ridge is what showed the problem was the whole
+  undressed hilltop rather than one bad prop.
+
   It deliberately does *not* test the slope of the triangles under a cell. That
   is the wrong question for a staircase, whose risers are vertical and whose
   treads are flat: a per-triangle slope test rejects every stair in the model
