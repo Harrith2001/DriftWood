@@ -60,6 +60,16 @@ to open a location. On touch devices an on-screen stick and two buttons appear
 instead. Every location is also reachable from the HUD list, so the 3D
 experience is never a gate on the information.
 
+### The scavenger hunt
+
+Eight bottle caps are hidden across the neighbourhood — walk into one to take
+it, and two of them hang above standing reach and have to be jumped for. Finding
+all eight opens a panel that is not otherwise reachable.
+
+It is deliberately not a gate: every piece of the portfolio stays one click away
+in the HUD whether or not a single cap is found. The hunt exists because a place
+you can only walk around is a place you look at once.
+
 ### Quality tiers
 
 `DeviceService` probes core count, memory and pointer type before anything is
@@ -179,6 +189,16 @@ A few things in here are load-bearing and easy to break:
   the feet skating — no playback rate makes a walk animation honestly cover the
   4.2 m/s the character used to move at, so `WALK_SPEED` came down to a walk and
   the run multiplier does the ground-covering.
+- **Placing anything in the world means asking the probe twice.** A spot that is
+  reachable is not automatically a spot you can put something on. Two bugs came
+  out of assuming otherwise, both caught by `collectibles.config.spec.ts` and by
+  driving the character to every cap in turn rather than trusting the map:
+  coordinates are written as whole metres while the grid is half-metre cells, so
+  rounding can land on the exact boundary of a blocked cell; and a terrace edge
+  can drop three metres between neighbouring cells, so the height gets reported
+  from the top of the step while the rounded coordinate falls to the bottom,
+  leaving a cap hanging three metres overhead. The chooser now requires the
+  neighbourhood to be both reachable and level.
 - **Templates are only checked by the Angular compiler.** `tsc --noEmit` will
   happily pass a template calling a method that does not exist; `npm run build`
   is what catches it. Run the build, not just the type-check, after touching a

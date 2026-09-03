@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import type { PanelId, Phase } from '../models/experience.model';
 import { HOTSPOTS } from '../world/world.config';
+import { COLLECTIBLES } from '../world/collectibles.config';
 
 /**
  * The single source of truth shared between the Three.js layer and the Angular
@@ -32,9 +33,27 @@ export class ExperienceStateService {
   readonly openPanel = this._openPanel.asReadonly();
   readonly discovered = this._discovered.asReadonly();
 
-  readonly discoveredCount = computed(() => this._discovered().size);
+  /**
+   * Counts locations only. The colophon is a panel but not a place — it has no
+   * beacon, cannot be walked to, and counting it would push the tally past the
+   * four the HUD advertises.
+   */
+  readonly discoveredCount = computed(
+    () => HOTSPOTS.filter((spot) => this._discovered().has(spot.id)).length,
+  );
   readonly totalHotspots = HOTSPOTS.length;
   readonly allDiscovered = computed(() => this.discoveredCount() === this.totalHotspots);
+
+  // ── Scavenger hunt ─────────────────────────────────────────────────────────
+  private readonly _caps = signal<ReadonlySet<string>>(new Set());
+
+  readonly caps = this._caps.asReadonly();
+  readonly capsFound = computed(() => this._caps().size);
+  readonly totalCaps = COLLECTIBLES.length;
+  readonly allCapsFound = computed(() => this.capsFound() === this.totalCaps);
+  /** Label of the cap just taken, for the pickup toast. Cleared on a timer. */
+  private readonly _lastCap = signal<string | null>(null);
+  readonly lastCap = this._lastCap.asReadonly();
 
   /** True once the visitor is in control — gates the HUD and input handling. */
   readonly isExploring = computed(() => this._phase() === 'explore');
@@ -72,6 +91,27 @@ export class ExperienceStateService {
 
   closePanel(): void {
     this._openPanel.set(null);
+  }
+
+  /**
+   * Records a cap and reports whether that completed the hunt.
+   *
+   * The caller decides what completion means; this only knows the count.
+   */
+  collectCap(id: string, label: string): { completed: boolean } {
+    const before = this._caps();
+    if (before.has(id)) return { completed: false };
+
+    const next = new Set(before);
+    next.add(id);
+    this._caps.set(next);
+    this._lastCap.set(label);
+
+    return { completed: next.size === this.totalCaps };
+  }
+
+  clearLastCap(): void {
+    this._lastCap.set(null);
   }
 
   /** Opens the hotspot in range, if there is one. Returns whether it acted. */

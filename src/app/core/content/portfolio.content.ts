@@ -171,6 +171,46 @@ export const PANELS: Readonly<Record<PanelId, PanelContent>> = {
       { label: 'LinkedIn', href: 'https://www.linkedin.com/' },
     ],
   },
+
+  /**
+   * The reward for finding all eight caps. No beacon marks it and it is not in
+   * the HUD's list — it opens itself the moment the hunt is finished, and stays
+   * available afterwards.
+   */
+  colophon: {
+    id: 'colophon',
+    title: 'How this was built',
+    kicker: 'You found all eight',
+    body: [
+      `Since you went looking: this street is a real place, and almost none of
+       what makes it walkable was authored by hand.`,
+    ],
+    items: [
+      {
+        title: 'The ground decides',
+        description:
+          'Where you can walk is read off the mesh, not drawn over a screenshot. Every triangle is rasterised onto a half-metre grid offline, flood-filled from the point you land on, and everything the fill cannot reach becomes a wall. Re-running it after a model change re-derives the whole map.',
+      },
+      {
+        title: 'Why the stairs work',
+        description:
+          'A staircase defeats the obvious test: its risers are vertical and its treads are flat, so judging ground by the slope of the triangles under it rejects every stair in the city while happily accepting a smooth bank. What decides it is the height between one foothold and the next.',
+      },
+      {
+        title: 'What stops you',
+        description:
+          'Two things, and they answer different questions. A generated map knows which ground has no route to it. A pair of rays swept along each step knows a railing, a lamp post or a parked car is in the way — those stand on ground that is walkable either side of them, and no grid describes that.',
+      },
+      {
+        title: 'The payload',
+        meta: '292 MB → 9 MB',
+        description:
+          'Animation exports each bundle a duplicate of the character and a 4K texture set for about 21 KB of keyframes. The build strips them to skeletons, re-encodes every texture per measured alpha, and converts the city out of a materials workflow the renderer stopped supporting.',
+      },
+    ],
+    links: [{ label: 'Read the source', href: 'https://github.com/Harrith2001/DriftWood' }],
+    credits: CREDITS,
+  },
 };
 
 /** Control hints shown in the HUD. Keyboard first, touch appended on mobile. */

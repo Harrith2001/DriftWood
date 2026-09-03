@@ -38,7 +38,12 @@ export interface Hotspot {
   readonly color: number;
 }
 
-export type PanelId = 'about' | 'projects' | 'skills' | 'contact';
+/**
+ * `colophon` is the reward for finishing the scavenger hunt and is the one panel
+ * with no beacon in the world — it cannot be walked to, only earned, and it does
+ * not count toward the four locations the HUD tracks.
+ */
+export type PanelId = 'about' | 'projects' | 'skills' | 'contact' | 'colophon';
 
 /** Rectangular region in world XZ. Used for both walkable areas and blockers. */
 export interface Region {

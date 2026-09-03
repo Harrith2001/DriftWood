@@ -249,3 +249,100 @@
     animation-duration: 1ms;
   }
 }
+
+/* ── Scavenger hunt ──
+   Sits opposite the objective list so the two tallies never read as one
+   control. The cap itself is drawn in CSS: a small brass disc, which is
+   cheaper and sharper than an image at this size. */
+.caps {
+  position: absolute;
+  top: clamp(1rem, 3vh, 2rem);
+  right: clamp(1rem, 3vw, 2rem);
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  margin: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.4);
+}
+
+.caps__icon {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe9a8, #ffab3d 60%, #c9741a);
+  box-shadow: 0 0 6px rgb(255 176 90 / 0.7);
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.caps__count {
+  font-size: 0.8125rem;
+  color: #ffc46b;
+}
+
+.caps__sep {
+  opacity: 0.5;
+}
+
+.caps__word {
+  margin-left: 0.15rem;
+}
+
+/* Every one found: the tally stops being a chore counter and becomes a note. */
+.caps--done .caps__count,
+.caps--done .caps__word {
+  color: #ffd58a;
+}
+
+/* ── Pickup toast ──
+   Deliberately not centred: the middle of the screen belongs to the character
+   and to the "open" prompt, and a message landing there mid-stride reads as an
+   interruption rather than a small reward. */
+.pickup {
+  position: absolute;
+  top: clamp(3.1rem, 7vh, 4.4rem);
+  right: clamp(1rem, 3vw, 2rem);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgb(255 196 107 / 0.28);
+  border-radius: 999px;
+  background: rgb(24 16 10 / 0.55);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  color: rgb(255 255 255 / 0.82);
+  animation: pickupIn 260ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.pickup__icon {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe9a8, #ffab3d 60%, #c9741a);
+  flex: 0 0 auto;
+}
+
+@keyframes pickupIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pickup {
+    animation-duration: 1ms;
+  }
+}

@@ -51,6 +51,9 @@ export class Experience implements AfterViewInit, OnDestroy {
   private readonly device = inject(DeviceService);
 
   private world: OceanWorld | null = null;
+  /** Timers for the pickup toast and the reward panel. Cleared on teardown. */
+  private capToastTimer: ReturnType<typeof setTimeout> | undefined;
+  private rewardTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Drives the loader fade-out; kept separate from `phase` so it can lag it. */
   protected readonly loaderDismissed = signal(false);
@@ -82,6 +85,7 @@ export class Experience implements AfterViewInit, OnDestroy {
         onLanded: () => this.zone.run(() => this.onLanded()),
         onNearbyHotspotChange: (id) => this.zone.run(() => this.state.setNearbyHotspot(id)),
         onInteract: () => this.zone.run(() => this.state.openNearby()),
+        onCapCollected: (id, label) => this.zone.run(() => this.onCapCollected(id, label)),
       },
       this.device.prefersReducedMotion,
     );
@@ -104,6 +108,8 @@ export class Experience implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    clearTimeout(this.capToastTimer);
+    clearTimeout(this.rewardTimer);
     this.world?.dispose();
     this.world = null;
     // Always hand scrolling back, even if the component is torn down mid-fall.
@@ -178,6 +184,27 @@ export class Experience implements AfterViewInit, OnDestroy {
 
   protected requestJump(): void {
     this.world?.requestJump();
+  }
+
+  /**
+   * Records a cap, shows the pickup toast, and opens the reward once the last
+   * one is in.
+   *
+   * The reward waits a beat. Finishing the hunt and having a full-screen panel
+   * appear in the same frame reads as an interruption rather than a payoff —
+   * the short delay lets the collection flourish land first.
+   */
+  private onCapCollected(id: string, label: string): void {
+    const { completed } = this.state.collectCap(id, label);
+
+    clearTimeout(this.capToastTimer);
+    this.capToastTimer = setTimeout(() => this.zone.run(() => this.state.clearLastCap()), 2600);
+
+    if (!completed) return;
+    clearTimeout(this.rewardTimer);
+    // Through openPanel, not the state directly, so movement is suspended the
+    // same way it is for every other panel.
+    this.rewardTimer = setTimeout(() => this.zone.run(() => this.openPanel('colophon')), 1400);
   }
 
   protected onTouchAxes(axes: { forward: number; turn: number }): void {

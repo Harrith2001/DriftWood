@@ -559,6 +559,94 @@ function furthestFrom(placed, maxWalk = 70) {
  * by hand is how one ended up on a shelf against a bank and another wedged
  * against a wall.
  */
+/**
+ * Hiding places for the scavenger hunt.
+ *
+ * Spread greedily from the landing point so they lead the visitor outward
+ * through the whole neighbourhood rather than ringing the plaza. Openness is
+ * required but only modestly — a hunt wants things tucked beside a stall or at
+ * the foot of a stairway, not lined up in the middle of the road.
+ */
+{
+  // Bands of distance from the landing point, not a single global spread.
+  // Maximising spread outright pushes every item to the far edge of the model,
+  // onto the bare backdrop road 160 metres out; banding pulls the visitor
+  // steadily outward through the streets instead.
+  const bands = [[12, 30], [12, 30], [30, 55], [30, 55], [55, 85], [55, 85], [85, 120], [85, 120]];
+  const chosen = [];
+
+  for (const [near, far] of bands) {
+    let best = null;
+    for (let row = 0; row < ROWS; row += 2) {
+      for (let col = 0; col < COLS; col += 2) {
+        const k = row * COLS + col;
+        if (!reached[k]) continue;
+        const open = openness(col, row);
+        if (open < 0.6) continue;
+
+        const wx = cx(col) + PLACEMENT.x, wz = cz(row) + PLACEMENT.z;
+        const fromLanding = Math.hypot(wx - LANDING.x, wz - LANDING.z);
+        if (fromLanding < near || fromLanding > far) continue;
+
+        // Check the *rounded* coordinate, which is what gets written out. Cells
+        // are half a metre and these land on whole metres, so rounding can shunt
+        // a perfectly good spot into the blocked cell next door — which is how a
+        // cap ended up inside a wall with nothing in the probe complaining.
+        const rx = Math.round(wx), rz = Math.round(wz);
+        const rc = Math.floor((rx - PLACEMENT.x - X0) / CELL);
+        const rr = Math.floor((rz - PLACEMENT.z - Z0) / CELL);
+        if (rc < 0 || rc >= COLS || rr < 0 || rr >= ROWS) continue;
+
+        // Every cell within a body's width must be reachable *and* at much the
+        // same height. Two separate traps, both of which produced a cap that
+        // could not be picked up:
+        //
+        // These coordinates land on whole metres while cells are half a metre,
+        // so a spot can round onto the exact boundary of a blocked cell and sit
+        // half inside a wall.
+        //
+        // And a terrace edge can drop three metres between one cell and the
+        // next. Land on one of those and the height gets reported from the top
+        // of the step while the rounded coordinate falls to the bottom of it,
+        // leaving the cap hanging three metres over the visitor's head with
+        // nothing in either map disagreeing.
+        const centreY = floor[rr * COLS + rc];
+        let clear = true;
+        for (let dc = -3; dc <= 3 && clear; dc++) {
+          for (let dr = -3; dr <= 3 && clear; dr++) {
+            const nc = rc + dc, nr = rr + dr;
+            if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) { clear = false; break; }
+            const nk = nr * COLS + nc;
+            if (!reached[nk]) clear = false;
+            else if (Math.abs(floor[nk] - centreY) > 1.2) clear = false;
+          }
+        }
+        if (!clear) continue;
+
+        // Inside the band, take whatever sits furthest from the ones already
+        // placed, so the pair in each band are not neighbours.
+        let nearest = Infinity;
+        for (const c of chosen) nearest = Math.min(nearest, Math.hypot(wx - c.x, wz - c.z));
+        if (!best || nearest > best.nearest) {
+          best = {
+            x: Math.round(wx), z: Math.round(wz),
+            y: floor[k] + PLACEMENT.y, open, nearest, fromLanding,
+          };
+        }
+      }
+    }
+    if (best) chosen.push(best);
+  }
+
+  console.log('\n=== Scavenger hunt: eight hiding places ===');
+  for (const c of chosen) {
+    console.log(
+      `  { x: ${String(c.x).padStart(4)}, y: ${c.y.toFixed(2).padStart(7)}, z: ${String(c.z).padStart(5)} },` +
+      `  // ${c.fromLanding.toFixed(0)} m out, open ${(c.open * 100).toFixed(0)}%`,
+    );
+  }
+}
+
 {
   const placed = [[-10, 2], [48, -28], [-11, -42]];
   const options = placeBeacon(placed, { minOpen: 0.85, maxWalk: 55 })

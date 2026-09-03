@@ -23,14 +23,26 @@ export class Hud {
   readonly discovered = input<ReadonlySet<PanelId>>(new Set<PanelId>());
   readonly hidden = input(false);
   readonly touch = input(false);
+  readonly capsFound = input(0);
+  readonly totalCaps = input(0);
+  /** Label of the cap just picked up; shown briefly, then cleared. */
+  readonly lastCap = input<string | null>(null);
 
   readonly interact = output<void>();
   readonly jumpTo = output<PanelId>();
 
   protected readonly hotspots = HOTSPOTS;
 
-  protected readonly discoveredCount = computed(() => this.discovered().size);
-  protected readonly allDiscovered = computed(() => this.discovered().size === HOTSPOTS.length);
+  protected readonly allCapsFound = computed(
+    () => this.totalCaps() > 0 && this.capsFound() === this.totalCaps(),
+  );
+
+  protected readonly discoveredCount = computed(
+    () => HOTSPOTS.filter((spot) => this.discovered().has(spot.id)).length,
+  );
+  // Locations only. The colophon is a panel but not a place, so counting it
+  // would fade the control hints out one find early.
+  protected readonly allDiscovered = computed(() => this.discoveredCount() === HOTSPOTS.length);
   protected readonly nearbyTitle = computed(() => {
     const id = this.nearby();
     return id ? PANELS[id].title : null;

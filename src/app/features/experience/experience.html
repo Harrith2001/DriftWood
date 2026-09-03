@@ -27,6 +27,9 @@
       [discovered]="state.discovered()"
       [hidden]="state.openPanel() !== null"
       [touch]="isTouch()"
+      [capsFound]="state.capsFound()"
+      [totalCaps]="state.totalCaps"
+      [lastCap]="state.lastCap()"
       (interact)="requestInteract()"
       (jumpTo)="jumpTo($event)"
     />

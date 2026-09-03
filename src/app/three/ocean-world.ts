@@ -20,6 +20,7 @@ import { createSky } from './world/sky';
 import { CloudField } from './world/clouds';
 import { Environment } from './world/environment';
 import { Beacons } from './world/beacons';
+import { Collectibles } from './world/collectibles';
 import { GroundSampler } from './world/ground-sampler';
 import { Character } from './character/character';
 import { CameraRig } from './camera/camera-rig';
@@ -41,6 +42,8 @@ export interface WorldCallbacks {
   onLanded(): void;
   onNearbyHotspotChange(id: PanelId | null): void;
   onInteract(): void;
+  /** A scavenger-hunt cap was walked into. */
+  onCapCollected(id: string, label: string): void;
 }
 
 /**
@@ -65,6 +68,7 @@ export class OceanWorld {
   private rig!: CameraRig;
   private clouds!: CloudField;
   private beacons!: Beacons;
+  private collectibles!: Collectibles;
   private environment!: Environment;
   private character!: Character;
   private impact!: ImpactBurst;
@@ -156,6 +160,9 @@ export class OceanWorld {
 
     this.beacons = new Beacons();
     this.scene.add(this.beacons.group);
+
+    this.collectibles = new Collectibles();
+    this.scene.add(this.collectibles.group);
 
     this.walk = new WalkController(
       this.character,
@@ -292,6 +299,14 @@ export class OceanWorld {
       this.callbacks.onNearbyHotspotChange(nearby);
     }
 
+    // Measured against the feet, not the ground: two of the caps hang above
+    // standing reach and are only collectable at the top of a jump.
+    for (const cap of this.collectibles.update(
+      delta, this.walk.positionX, this.walk.feetY, this.walk.positionZ,
+    )) {
+      this.callbacks.onCapCollected(cap.id, cap.label);
+    }
+
     this.rig.followCharacter(
       this.walk.positionX,
       this.walk.positionZ,
@@ -361,6 +376,7 @@ export class OceanWorld {
     this.arrival?.dispose();
     this.input?.dispose();
     this.beacons?.dispose();
+    this.collectibles?.dispose();
     this.clouds?.dispose();
     this.impact?.dispose();
     this.character?.dispose();

@@ -30,6 +30,24 @@
     </ul>
   </nav>
 
+  <!-- Scavenger hunt. A tally, not a list: naming the eight would hand over
+       the whole hunt, and the point is to go and look. -->
+  <p class="caps" [class.caps--done]="allCapsFound()">
+    <span class="caps__icon" aria-hidden="true"></span>
+    <span class="caps__count">{{ capsFound() }}</span>
+    <span class="caps__sep">/</span>
+    <span>{{ totalCaps() }}</span>
+    <span class="caps__word">{{ allCapsFound() ? 'all found' : 'caps' }}</span>
+  </p>
+
+  <!-- Pickup toast -->
+  @if (lastCap()) {
+    <p class="pickup" role="status" aria-live="polite">
+      <span class="pickup__icon" aria-hidden="true"></span>
+      {{ lastCap() }}
+    </p>
+  }
+
   <!-- Proximity prompt -->
   @if (nearbyTitle()) {
     <div class="prompt" role="status" aria-live="polite">
