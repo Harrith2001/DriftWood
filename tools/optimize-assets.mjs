@@ -193,9 +193,15 @@ await buildAnimation('Falling_Idle.glb', 'anim-fall.glb', 'fall');
 
 console.log('\nMeshes (quantized geometry, JPEG/PNG textures)');
 // The character is the hero of the intro portrait and is read at close range,
-// so it keeps the higher texture budget.
+// so it keeps a higher texture budget than the city — but not the 1536 it had.
+//
+// That budget was costing 1.9 MB for one texture: the hair, which genuinely
+// needs PNG (its alpha runs the full range, as hair cards do) and so pays
+// lossless prices per pixel. At 1536 that single map was 3.7 MB, making the
+// character a larger download than the entire city. At 1024 it is 1.8 MB, and
+// alpha-cut hair does not resolve past that on any screen this ships to.
 await buildMesh('Offensive Idle.glb', 'character.glb', 'character', {
-  textureSize: 1536,
+  textureSize: 1024,
   dropMaps: ['specular', 'glossiness'],
 });
 // The city is a PS1-era low-poly street scene: 68k triangles across 218 meshes,

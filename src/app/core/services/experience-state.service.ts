@@ -45,7 +45,13 @@ export class ExperienceStateService {
   readonly allDiscovered = computed(() => this.discoveredCount() === this.totalHotspots);
 
   // ── Scavenger hunt ─────────────────────────────────────────────────────────
-  private readonly _caps = signal<ReadonlySet<string>>(new Set());
+  /**
+   * Restored from the last visit. Seven caps found and a refresh sending you
+   * back to zero is the fastest way to make someone stop playing — and a hunt
+   * spread over a hundred and twenty metres of street is not something anyone
+   * wants to repeat by accident.
+   */
+  private readonly _caps = signal<ReadonlySet<string>>(readStoredCaps());
 
   readonly caps = this._caps.asReadonly();
   readonly capsFound = computed(() => this._caps().size);
@@ -106,8 +112,16 @@ export class ExperienceStateService {
     next.add(id);
     this._caps.set(next);
     this._lastCap.set(label);
+    writeStoredCaps(next);
 
     return { completed: next.size === this.totalCaps };
+  }
+
+  /** Clears the hunt so it can be played again. */
+  resetHunt(): void {
+    this._caps.set(new Set());
+    this._lastCap.set(null);
+    writeStoredCaps(new Set());
   }
 
   clearLastCap(): void {
@@ -120,5 +134,43 @@ export class ExperienceStateService {
     if (!id || this._openPanel() !== null) return false;
     this.openPanelById(id);
     return true;
+  }
+}
+
+/**
+ * Hunt progress, kept in the browser between visits.
+ *
+ * Every access is wrapped, and not defensively for its own sake: `localStorage`
+ * does not exist during server rendering, and in a private window or with site
+ * data blocked the property itself throws on access rather than returning null.
+ * A portfolio that white-screens because someone has cookies turned off is a
+ * worse outcome than a hunt that forgets.
+ *
+ * Ids are filtered against the current set on the way in, so renaming or moving
+ * a cap cannot leave a stale id counting toward the total and stranding the
+ * visitor one find short of a reward they can never collect.
+ */
+const CAPS_KEY = 'driftwood.caps.v1';
+
+function readStoredCaps(): ReadonlySet<string> {
+  try {
+    const raw = globalThis.localStorage?.getItem(CAPS_KEY);
+    if (!raw) return new Set();
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+
+    const known = new Set(COLLECTIBLES.map((c) => c.id));
+    return new Set(parsed.filter((id): id is string => typeof id === 'string' && known.has(id)));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeStoredCaps(caps: ReadonlySet<string>): void {
+  try {
+    globalThis.localStorage?.setItem(CAPS_KEY, JSON.stringify([...caps]));
+  } catch {
+    // Storage full, blocked, or absent. The hunt still works for this visit.
   }
 }

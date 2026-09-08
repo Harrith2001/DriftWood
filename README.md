@@ -42,7 +42,7 @@ src/app/
 │   └── effects/      impact dust and shockwave
 └── features/experience/
     ├── experience.*  the shell that owns the canvas
-    └── ui/           loader, intro, HUD, content panel, touch controls
+    └── ui/           loader, intro, HUD, panels, touch controls, readable page
 ```
 
 Rendering runs outside the Angular zone, so the render loop never schedules
@@ -64,7 +64,9 @@ experience is never a gate on the information.
 
 Eight bottle caps are hidden across the neighbourhood — walk into one to take
 it, and two of them hang above standing reach and have to be jumped for. Finding
-all eight opens a panel that is not otherwise reachable.
+all eight opens a panel that is not otherwise reachable. Progress is kept in the
+browser between visits, and once the hunt is done the tally in the HUD becomes
+the way back into the reward.
 
 It is deliberately not a gate: every piece of the portfolio stays one click away
 in the HUD whether or not a single cap is found. The hunt exists because a place
@@ -100,9 +102,9 @@ animation files entirely, and resizes and re-encodes the rest.
 | idle | 55.6 MB | 0.41 MB |
 | walk | 95.7 MB | 0.09 MB |
 | fall | 55.1 MB | 0.07 MB |
-| character | 55.6 MB | 5.7 MB |
+| character | 55.6 MB | 3.6 MB |
 | city | ~30 MB | 3.1 MB |
-| **total** | **~292 MB** | **9.4 MB** |
+| **total** | **~292 MB** | **7.5 MB** |
 
 Textures are JPEG or PNG, chosen per texture by measuring whether the alpha
 channel is actually used. Not WebP: `EXT_texture_webp` silently drops every
@@ -189,6 +191,26 @@ A few things in here are load-bearing and easy to break:
   the feet skating — no playback rate makes a walk animation honestly cover the
   4.2 m/s the character used to move at, so `WALK_SPEED` came down to a walk and
   the run multiplier does the ground-covering.
+- **The portfolio is a document first** (`ui/readable-portfolio/`). The whole of
+  it renders into the DOM on every load, hidden off-screen behind the scene and
+  shown as the page when there is no WebGL. Before it, the server-rendered HTML
+  contained three pieces of text — a name, a role, and the word "Preparing" —
+  because panels only entered the DOM once a visitor walked a character to a
+  beacon. Search engines, link previews and anyone with JavaScript off saw an
+  empty page, which for a portfolio is the most expensive bug available: it is
+  invisible in exactly the places someone looks for you. It reads `PANELS`, so
+  it cannot drift from what the panels say, and it is hidden with `clip-path`
+  rather than `display: none`, which would take it out of the accessibility tree
+  and defeat half the point.
+- **WebGL is checked before anything is built** (`DeviceService.supportsWebGL`).
+  A refused context throws from inside an async boot — an unhandled rejection
+  nobody sees, leaving the loader on a progress bar that never moves. The probe
+  runs first, and `boot()` catches anyway for the context that passes the probe
+  and is refused later.
+- **`public/` was never copied into the build.** The asset config listed only
+  `src/assets`, so `favicon.ico` had been 404ing since the project started, and
+  the social card would have silently gone missing too. Worth checking after any
+  `angular.json` change: build, then list `dist/`.
 - **Placing anything in the world means asking the probe twice.** A spot that is
   reachable is not automatically a spot you can put something on. Two bugs came
   out of assuming otherwise, both caught by `collectibles.config.spec.ts` and by

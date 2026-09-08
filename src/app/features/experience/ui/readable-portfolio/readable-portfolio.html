@@ -1,0 +1,77 @@
+@if (standalone()) {
+  <div class="page">
+    <div class="doc">
+      @if (reason()) {
+        <p class="notice" role="status">{{ reason() }}</p>
+      }
+      <ng-container [ngTemplateOutlet]="body" />
+    </div>
+  </div>
+} @else {
+  <div class="offscreen">
+    <ng-container [ngTemplateOutlet]="body" />
+  </div>
+}
+
+<ng-template #body>
+  <header class="masthead">
+    <h1 class="masthead__name">{{ identity.name }}</h1>
+    <p class="masthead__role">{{ identity.role }}</p>
+    <p class="masthead__tagline">{{ identity.tagline }}</p>
+  </header>
+
+  @for (id of order; track id) {
+    @let panel = panels[id];
+    <section class="section">
+      <h2 class="section__title">{{ panel.title }}</h2>
+
+      @for (paragraph of panel.body; track $index) {
+        <p class="section__text">{{ paragraph }}</p>
+      }
+
+      @if (panel.items?.length) {
+        <dl class="entries">
+          @for (item of panel.items; track item.title) {
+            <div class="entry">
+              <dt class="entry__title">
+                {{ item.title }}
+                @if (item.meta) {
+                  <span class="entry__meta">{{ item.meta }}</span>
+                }
+              </dt>
+              <dd class="entry__description">
+                {{ item.description }}
+                @if (item.tags?.length) {
+                  <span class="entry__tags">{{ item.tags?.join(' · ') }}</span>
+                }
+              </dd>
+            </div>
+          }
+        </dl>
+      }
+
+      @if (panel.links?.length) {
+        <ul class="links">
+          @for (link of panel.links; track link.href) {
+            <li>
+              <a
+                [href]="link.href"
+                [attr.target]="isExternal(link.href) ? '_blank' : null"
+                [attr.rel]="isExternal(link.href) ? 'noopener noreferrer' : null"
+                >{{ link.label }}</a
+              >
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  @if (panels.colophon.credits?.length) {
+    <footer class="colophon">
+      @for (credit of panels.colophon.credits; track credit.href) {
+        <a [href]="credit.href" target="_blank" rel="noopener noreferrer">{{ credit.label }}</a>
+      }
+    </footer>
+  }
+</ng-template>

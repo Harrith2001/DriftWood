@@ -30,6 +30,7 @@ export class Hud {
 
   readonly interact = output<void>();
   readonly jumpTo = output<PanelId>();
+  readonly openReward = output<void>();
 
   protected readonly hotspots = HOTSPOTS;
 

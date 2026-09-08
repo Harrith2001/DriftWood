@@ -89,6 +89,11 @@ export class OceanWorld {
     private readonly quality: QualitySettings,
     private readonly callbacks: WorldCallbacks,
     private readonly reducedMotion: boolean,
+    /**
+     * Caps already found on a previous visit. They are never spawned, so a
+     * returning visitor is not sent past eight glowing things they have taken.
+     */
+    private readonly collectedCaps: ReadonlySet<string> = new Set(),
   ) {}
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -161,7 +166,7 @@ export class OceanWorld {
     this.beacons = new Beacons();
     this.scene.add(this.beacons.group);
 
-    this.collectibles = new Collectibles();
+    this.collectibles = new Collectibles(this.collectedCaps);
     this.scene.add(this.collectibles.group);
 
     this.walk = new WalkController(

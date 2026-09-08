@@ -32,13 +32,26 @@
 
   <!-- Scavenger hunt. A tally, not a list: naming the eight would hand over
        the whole hunt, and the point is to go and look. -->
-  <p class="caps" [class.caps--done]="allCapsFound()">
-    <span class="caps__icon" aria-hidden="true"></span>
-    <span class="caps__count">{{ capsFound() }}</span>
-    <span class="caps__sep">/</span>
-    <span>{{ totalCaps() }}</span>
-    <span class="caps__word">{{ allCapsFound() ? 'all found' : 'caps' }}</span>
-  </p>
+  @if (allCapsFound()) {
+    <!-- Once the hunt is done the tally becomes the way back into the reward.
+         Progress survives a reload, so without this a returning visitor arrives
+         at eight-of-eight with no route to the thing they earned. -->
+    <button type="button" class="caps caps--done" (click)="openReward.emit()">
+      <span class="caps__icon" aria-hidden="true"></span>
+      <span class="caps__count">{{ capsFound() }}</span>
+      <span class="caps__sep">/</span>
+      <span>{{ totalCaps() }}</span>
+      <span class="caps__word">all found</span>
+    </button>
+  } @else {
+    <p class="caps">
+      <span class="caps__icon" aria-hidden="true"></span>
+      <span class="caps__count">{{ capsFound() }}</span>
+      <span class="caps__sep">/</span>
+      <span>{{ totalCaps() }}</span>
+      <span class="caps__word">caps</span>
+    </p>
+  }
 
   <!-- Pickup toast -->
   @if (lastCap()) {

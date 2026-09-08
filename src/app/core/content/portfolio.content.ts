@@ -69,8 +69,8 @@ export const PANELS: Readonly<Record<PanelId, PanelContent>> = {
        real-time medium rather than a page. Most of my work sits where
        rendering, motion and interface design overlap.`,
       `I care about the details that survive scrutiny: an animation that
-       retargets cleanly, a camera that never clips a wall, a 14 MB payload
-       where a 340 MB one would have shipped. Craft is mostly the accumulation
+       retargets cleanly, a camera that never clips a wall, a 9 MB payload
+       where a 290 MB one would have shipped. Craft is mostly the accumulation
        of refusing to leave things broken.`,
     ],
     items: [

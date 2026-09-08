@@ -1,0 +1,240 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   The portfolio as a document, in two states.
+
+   Hidden: present for crawlers and screen readers, taken out of the visual flow
+   without `display: none` or `visibility: hidden`, both of which remove it from
+   the accessibility tree — which would defeat half its purpose.
+
+   Standalone: the page itself, when there is no WebGL to render a city into. It
+   inherits the panels' plaster palette rather than inventing a second look, so
+   somebody who never sees the 3D scene still meets the same design.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.offscreen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+/* ── As the page ── */
+
+.page {
+  min-height: 100dvh;
+  padding: clamp(2rem, 8vh, 6rem) clamp(1.25rem, 6vw, 3rem);
+  background-color: var(--plaster, #f2ece0);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.3'/%3E%3C/svg%3E"),
+    linear-gradient(170deg, var(--plaster, #f2ece0) 0%, var(--plaster-2, #e9e1d1) 100%);
+  background-size: 180px 180px, auto;
+  background-blend-mode: soft-light, normal;
+  color: var(--panel-ink, #33302b);
+}
+
+.doc {
+  /* Prose caps at a readable measure; the masthead is allowed to run wider. */
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+/* The one place this state explains itself. Stated plainly, once, and never
+   dressed up as an error — nothing has gone wrong for the reader. */
+.notice {
+  margin: 0 0 clamp(2rem, 6vh, 3.5rem);
+  padding: 0.85rem 1.1rem;
+  border: 1px solid var(--trim, #c4b7a3);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.45);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--panel-ink-soft, #5c554b);
+}
+
+/* ── Masthead ── */
+
+.masthead {
+  margin: 0 0 clamp(2.5rem, 8vh, 4.5rem);
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--trim, #c4b7a3);
+}
+
+.masthead__name {
+  margin: 0;
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-weight: 600;
+  font-size: clamp(2.5rem, 9vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  color: var(--panel-ink, #33302b);
+}
+
+.masthead__role {
+  margin: 0.9rem 0 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--panel-ink-soft, #5c554b);
+}
+
+.masthead__tagline {
+  margin: 1.1rem 0 0;
+  font-size: clamp(1.0625rem, 2.4vw, 1.3125rem);
+  line-height: 1.5;
+  text-wrap: pretty;
+  color: var(--panel-ink-soft, #5c554b);
+}
+
+/* ── Sections ── */
+
+.section {
+  margin: 0 0 clamp(2.5rem, 7vh, 4rem);
+}
+
+.section__title {
+  margin: 0 0 1rem;
+  padding-bottom: 0.75rem;
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--panel-ink, #33302b);
+
+  /* The same hand-brushed band the panels carry, so the two states are
+     recognisably one design rather than a fallback bolted on. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='6' viewBox='0 0 60 6'%3E%3Cpath d='M0 3.4 q7 -1 15 -0.3 t15 0.5 t15 -0.6 t15 0.3' fill='none' stroke='%23c4b7a3' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: 60px 6px;
+}
+
+.section__text {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  line-height: 1.75;
+  text-wrap: pretty;
+  color: var(--panel-ink-soft, #5c554b);
+}
+
+/*
+ * Note the absence of `white-space: pre-line`, which the panels do use.
+ *
+ * The copy is authored as indented template literals, so it carries newlines
+ * that exist to keep the source readable and mean nothing to a reader. The
+ * panels are wide enough that those breaks happen to fall near where the text
+ * would wrap anyway; this column is narrower, and preserving them produced
+ * lines of four words followed by lines of twelve. Let it flow.
+ */
+
+/* ── Entries ──
+   A definition list, because that is what these are: a named thing and its
+   description. Not a card grid — eight identical bordered boxes would say
+   nothing the text does not, and would say it more slowly. */
+
+.entries {
+  margin: 1.75rem 0 0;
+}
+
+.entry {
+  padding: 1.1rem 0;
+  border-top: 1px solid var(--trim, #c4b7a3);
+}
+
+.entry__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display, sans-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--panel-ink, #33302b);
+}
+
+.entry__meta {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--panel-ink-soft, #5c554b);
+}
+
+.entry__description {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  text-wrap: pretty;
+  color: var(--panel-ink-soft, #5c554b);
+}
+
+.entry__tags {
+  display: block;
+  margin-top: 0.5rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--panel-ink-faint, #857c6e);
+}
+
+/* ── Links ── */
+
+.links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+
+.links a {
+  display: inline-block;
+  padding: 0.45rem 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+  color: var(--panel-ink, #33302b);
+  text-decoration: none;
+  border-bottom: 1px solid var(--trim, #c4b7a3);
+  transition: border-color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.links a:hover {
+  border-color: var(--panel-ink, #33302b);
+}
+
+.links a:focus-visible {
+  outline: 2px solid var(--panel-ink, #33302b);
+  outline-offset: 3px;
+}
+
+/* ── Colophon ── */
+
+.colophon {
+  margin: clamp(2.5rem, 7vh, 4rem) 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--trim, #c4b7a3);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.colophon a {
+  color: var(--panel-ink-soft, #5c554b);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--trim, #c4b7a3);
+}
+
+.colophon a:hover {
+  color: var(--panel-ink, #33302b);
+}

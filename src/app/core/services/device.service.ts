@@ -18,6 +18,35 @@ export class DeviceService {
     return this.doc.defaultView?.matchMedia('(hover: none) and (pointer: coarse)').matches ?? false;
   }
 
+  /**
+   * Whether this browser can give us a WebGL context at all.
+   *
+   * Worth asking before building anything. A locked-down work laptop, a driver
+   * on the browser's blocklist or a machine with hardware acceleration switched
+   * off will refuse the context, and `new WebGLRenderer()` throws — which, from
+   * inside an async boot, is an unhandled rejection that leaves the loader
+   * spinning on "Preparing the streets" with no error and no way forward.
+   *
+   * The probe canvas is thrown away immediately; the real one is created later
+   * with its own options.
+   */
+  get supportsWebGL(): boolean {
+    if (!this.isBrowser) return false;
+    try {
+      const canvas = this.doc.createElement('canvas');
+      const gl =
+        canvas.getContext('webgl2') ??
+        canvas.getContext('webgl') ??
+        canvas.getContext('experimental-webgl');
+      // Release the probe context rather than waiting for the GC: browsers cap
+      // how many live contexts a page may hold, and the scene needs one.
+      (gl as WebGLRenderingContext | null)?.getExtension('WEBGL_lose_context')?.loseContext();
+      return gl !== null;
+    } catch {
+      return false;
+    }
+  }
+
   /** Honoured by suppressing the autoplayed arrival and all idle drift. */
   get prefersReducedMotion(): boolean {
     if (!this.isBrowser) return false;

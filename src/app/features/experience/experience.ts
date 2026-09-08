@@ -23,6 +23,7 @@ import { IntroOverlay } from './ui/intro-overlay/intro-overlay';
 import { Hud } from './ui/hud/hud';
 import { ContentPanel } from './ui/content-panel/content-panel';
 import { TouchControls } from './ui/touch-controls/touch-controls';
+import { ReadablePortfolio } from './ui/readable-portfolio/readable-portfolio';
 
 /**
  * The experience shell.
@@ -36,7 +37,7 @@ import { TouchControls } from './ui/touch-controls/touch-controls';
   selector: 'app-experience',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LoaderOverlay, IntroOverlay, Hud, ContentPanel, TouchControls],
+  imports: [LoaderOverlay, IntroOverlay, Hud, ContentPanel, TouchControls, ReadablePortfolio],
   templateUrl: './experience.html',
   styleUrl: './experience.css',
 })
@@ -59,6 +60,12 @@ export class Experience implements AfterViewInit, OnDestroy {
   protected readonly loaderDismissed = signal(false);
   protected readonly introLeaving = signal(false);
   protected readonly isTouch = signal(false);
+  /**
+   * No WebGL, so no scene. Set before anything is built rather than discovered
+   * when the renderer throws — that failure happens inside an async boot and
+   * would otherwise leave the loader spinning forever with nothing to say.
+   */
+  protected readonly noWebgl = signal(false);
 
   protected readonly showIntro = computed(
     () => this.state.phase() === 'intro' || this.state.phase() === 'arrival',
@@ -69,11 +76,47 @@ export class Experience implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     if (!this.isBrowser) return; // SSR renders the markup only; no WebGL.
 
+    // Ask before building. Without this the failure surfaces as a throw from
+    // deep inside an async boot, which is an unhandled rejection nobody sees —
+    // the loader simply never finishes and the visitor is left on a progress
+    // bar that will not move.
+    if (!this.device.supportsWebGL) {
+      this.showReadablePage();
+      return;
+    }
+
     this.isTouch.set(this.device.isTouch);
     this.zone.runOutsideAngular(() => void this.boot());
   }
 
   private async boot(): Promise<void> {
+    try {
+      await this.buildWorld();
+    } catch (error) {
+      // A context that probes fine can still be refused when the real renderer
+      // asks for it — a GPU reset, another tab exhausting the context budget.
+      // Falling back to the document is a better answer than a dead loader.
+      this.zone.run(() => this.showReadablePage());
+      console.error('The 3D scene could not start; showing the readable page.', error);
+    }
+  }
+
+  /**
+   * Hands the viewport back to the document.
+   *
+   * The body is `overflow: hidden` because the scene owns the whole viewport and
+   * a stray scroll would drag the fixed canvas around on mobile. With no scene
+   * there is nothing to protect, and a portfolio that cannot be scrolled shows
+   * one screen of itself.
+   */
+  private showReadablePage(): void {
+    this.noWebgl.set(true);
+    this.world?.dispose();
+    this.world = null;
+    this.doc.body.style.overflow = 'auto';
+  }
+
+  private async buildWorld(): Promise<void> {
     const world = new OceanWorld(
       this.canvasRef().nativeElement,
       this.device.quality,
@@ -88,6 +131,7 @@ export class Experience implements AfterViewInit, OnDestroy {
         onCapCollected: (id, label) => this.zone.run(() => this.onCapCollected(id, label)),
       },
       this.device.prefersReducedMotion,
+      this.state.caps(),
     );
 
     this.world = world;

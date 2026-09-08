@@ -346,3 +346,26 @@
     animation-duration: 1ms;
   }
 }
+
+/* The tally is a button once the hunt is over; it must not inherit the browser
+   button chrome that would make it look like a control the whole time. */
+button.caps {
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  font: inherit;
+  transition: color 180ms ease;
+}
+
+button.caps:hover .caps__word,
+button.caps:focus-visible .caps__word {
+  color: #fff;
+}
+
+button.caps:focus-visible {
+  outline: 2px solid #ffc46b;
+  outline-offset: 4px;
+  border-radius: 4px;
+}

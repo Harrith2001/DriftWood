@@ -1,3 +1,10 @@
+@if (noWebgl()) {
+  <!-- No WebGL: the readable document becomes the page. -->
+  <app-readable-portfolio
+    [standalone]="true"
+    reason="This browser cannot run WebGL, so the 3D city is not available here. The work is all below."
+  />
+} @else {
 <div class="stage">
   <!-- The scene. aria-hidden because everything it conveys is mirrored in the
        overlays and panels, which are the accessible representation. -->
@@ -32,6 +39,7 @@
       [lastCap]="state.lastCap()"
       (interact)="requestInteract()"
       (jumpTo)="jumpTo($event)"
+      (openReward)="openPanel('colophon')"
     />
 
     @if (isTouch() && state.openPanel() === null) {
@@ -44,4 +52,9 @@
   }
 
   <app-content-panel [panelId]="state.openPanel()" (close)="closePanel()" />
+
+  <!-- Always in the DOM: crawlers, link previews and screen readers get the
+       whole portfolio without anyone having to walk a character to a beacon. -->
+  <app-readable-portfolio />
 </div>
+}
