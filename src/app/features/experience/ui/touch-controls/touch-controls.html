@@ -1,27 +1,31 @@
 <div class="touch">
-  <div
-    class="stick"
-    (pointerdown)="onDown($event)"
-    (pointermove)="onMove($event)"
-    (pointerup)="onUp($event)"
-    (pointercancel)="onUp($event)"
-    (pointerleave)="onUp($event)"
-    role="application"
-    aria-label="Movement joystick"
-  >
+  <!-- Pointer listeners are attached in the component, outside Angular's zone.
+       Bound here they would run change detection on every pointermove. -->
+  <div #stick class="stick" role="application" aria-label="Movement joystick">
     <div class="stick__base" aria-hidden="true"></div>
-    <div
-      class="stick__knob"
-      aria-hidden="true"
-      [style.transform]="'translate(' + knobX() + 'px,' + knobY() + 'px)'"
-    ></div>
+    <div #knob class="stick__knob" aria-hidden="true"></div>
   </div>
 
   <div class="actions">
-    <button type="button" class="action action--jump" (click)="jump.emit()" aria-label="Jump">
+    <!-- Fired on press, not click: a click arrives only on release and is
+         dropped on touch when the stick already holds a pointer. The click
+         handler is the keyboard path, and ignores anything a pointer produced. -->
+    <button
+      type="button"
+      class="action action--jump"
+      aria-label="Jump"
+      (pointerdown)="onJumpPress()"
+      (click)="onKeyboardActivate($event, 'jump')"
+    >
       Jump
     </button>
-    <button type="button" class="action" (click)="interact.emit()" aria-label="Open location">
+    <button
+      type="button"
+      class="action"
+      aria-label="Open location"
+      (pointerdown)="onInteractPress()"
+      (click)="onKeyboardActivate($event, 'interact')"
+    >
       E
     </button>
   </div>

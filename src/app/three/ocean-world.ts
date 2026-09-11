@@ -258,6 +258,7 @@ export class OceanWorld {
       (window as unknown as { driftwood?: unknown }).driftwood = {
         walk: this.walk,
         rig: this.rig,
+        input: this.input,
         ground: this.groundSampler,
         scene: this.scene,
         environment: this.environment,

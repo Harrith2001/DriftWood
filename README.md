@@ -221,6 +221,23 @@ A few things in here are load-bearing and easy to break:
   from the top of the step while the rounded coordinate falls to the bottom,
   leaving a cap hanging three metres overhead. The chooser now requires the
   neighbourhood to be both reachable and level.
+- **Action buttons on touch fire on `pointerdown`, never `click`.** A click
+  arrives only on release, and on touch it is routinely dropped when another
+  pointer is already captured — one thumb on the stick, the other on jump. Bound
+  to click, jump worked standing still and did nothing while moving. The click
+  handler that remains is the keyboard path only, and ignores anything a pointer
+  produced: a button activated with Enter or Space emits a click with
+  `detail === 0`, a real press emits a positive one. That is what lets both
+  coexist without firing twice.
+- **The stick's listeners are attached outside Angular's zone**, and the knob is
+  moved by writing to its style. Bound in the template, each of the sixty
+  pointermove events a second schedules change detection across the whole
+  application — while the character is moving, on the device least able to
+  afford it.
+- **`window:touchstart` listeners in Angular are passive.** `preventDefault()`
+  on one does nothing except log an error on every touch. Worth remembering
+  before reaching for it: cancelling a touchstart also cancels the click the
+  browser would synthesise, which is what any button underneath depends on.
 - **Templates are only checked by the Angular compiler.** `tsc --noEmit` will
   happily pass a template calling a method that does not exist; `npm run build`
   is what catches it. Run the build, not just the type-check, after touching a

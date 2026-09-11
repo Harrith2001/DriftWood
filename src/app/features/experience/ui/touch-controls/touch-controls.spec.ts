@@ -125,6 +125,108 @@ describe('TouchControls', () => {
     expect(axes.last()!.forward).toBe(beforeStray);
   });
 
+  /**
+   * The jump-while-moving bug.
+   *
+   * Bound to `click`, the button fired on release and worked while standing
+   * still — but a click on touch is routinely dropped when another pointer is
+   * already captured, which is exactly one thumb on the stick and the other on
+   * jump. These assert the press path, the keyboard path, and that having both
+   * does not fire twice.
+   */
+  describe('action buttons', () => {
+    function button(label: string): HTMLButtonElement {
+      return fixture.nativeElement.querySelector(`button[aria-label="${label}"]`);
+    }
+
+    /** A real press, as a finger or mouse produces. */
+    function press(el: HTMLElement): void {
+      el.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, bubbles: true }));
+    }
+
+    /** The click a pointer produces on release — detail is positive. */
+    function pointerClick(el: HTMLElement): void {
+      el.dispatchEvent(new MouseEvent('click', { detail: 1, bubbles: true }));
+    }
+
+    /** The click Enter or Space produces — detail is zero. */
+    function keyboardClick(el: HTMLElement): void {
+      el.dispatchEvent(new MouseEvent('click', { detail: 0, bubbles: true }));
+    }
+
+    it('jumps on press, before the finger lifts', () => {
+      let jumps = 0;
+      component.jump.subscribe(() => jumps++);
+      press(button('Jump'));
+      expect(jumps).toBe(1);
+    });
+
+    it('jumps while the stick is already holding a pointer', () => {
+      let jumps = 0;
+      component.jump.subscribe(() => jumps++);
+
+      // One thumb on the stick, pushed forward and still down.
+      drag('pointerdown', 0, 0);
+      drag('pointermove', 0, -40);
+
+      press(button('Jump'));
+      expect(jumps).withContext('jump during an active stick gesture').toBe(1);
+    });
+
+    it('does not fire twice for one press', () => {
+      let jumps = 0;
+      component.jump.subscribe(() => jumps++);
+      const el = button('Jump');
+      press(el);
+      pointerClick(el); // the click that follows the press
+      expect(jumps).toBe(1);
+    });
+
+    it('still works from the keyboard', () => {
+      let jumps = 0;
+      component.jump.subscribe(() => jumps++);
+      keyboardClick(button('Jump'));
+      expect(jumps).toBe(1);
+    });
+
+    it('opens a location on press', () => {
+      let interacts = 0;
+      component.interact.subscribe(() => interacts++);
+      press(button('Open location'));
+      expect(interacts).toBe(1);
+    });
+
+    /**
+     * A second finger landing on the pad used to take ownership of it, so
+     * lifting that one re-centred the stick while the first was still pushed —
+     * the character stopping dead with a thumb still on the pad.
+     */
+    it('ignores a second finger landing on the stick', () => {
+      const axes = record();
+      drag('pointerdown', 0, 0);
+      drag('pointermove', 0, -46);
+      const walking = axes.last()!.forward;
+
+      // A second finger arrives and leaves.
+      stick.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 2, bubbles: true }));
+      stick.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, bubbles: true }));
+
+      expect(axes.last()!.forward)
+        .withContext('still walking after a stray second touch')
+        .toBeCloseTo(walking, 3);
+    });
+
+    it('keeps the two buttons distinct', () => {
+      let interacts = 0;
+      let jumps = 0;
+      component.interact.subscribe(() => interacts++);
+      component.jump.subscribe(() => jumps++);
+      press(button('Jump'));
+      expect(jumps).toBe(1);
+      expect(interacts).toBe(0);
+    });
+  });
+
   it('emits an interact request from the action button', () => {
     let fired = 0;
     component.interact.subscribe(() => fired++);

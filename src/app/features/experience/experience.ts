@@ -162,12 +162,20 @@ export class Experience implements AfterViewInit, OnDestroy {
 
   // ── Global input ───────────────────────────────────────────────────────────
 
-  /** Any of these begins the arrival while the title card is up. */
-  @HostListener('window:wheel', ['$event'])
-  @HostListener('window:touchstart', ['$event'])
-  protected onFirstGesture(event: Event): void {
+  /**
+   * Any of these begins the arrival while the title card is up.
+   *
+   * Nothing is cancelled here. Angular registers `window:touchstart` as a
+   * passive listener, so `preventDefault()` never had any effect beyond logging
+   * "Unable to preventDefault inside passive event listener" on every touch —
+   * and it was not needed: the body is `overflow: hidden`, so there is no page
+   * scroll to suppress. Cancelling would also have taken the synthesised click
+   * with it, which is what the "skip the arrival" button underneath depends on.
+   */
+  @HostListener('window:wheel')
+  @HostListener('window:touchstart')
+  protected onFirstGesture(): void {
     if (this.state.phase() !== 'intro') return;
-    event.preventDefault();
     this.beginArrival();
   }
 
